@@ -161,7 +161,7 @@ h1{font-family:var(--fd);font-size:clamp(1.5rem,4vw,2.35rem);font-weight:700;let
       </div>
       <div class="card" id="card-drops">
         <div class="ctitle">Drops / Seed Times PDF</div>
-        <div class="csub">Pre-meet seed times for Damascus swimmers.</div>
+        <div class="csub">Pre-meet seed times for your team's swimmers.</div>
         <div class="dz" id="dz-drops">
           <input type="file" accept=".pdf" onchange="handleFile('drops',this)">
           <div class="dz-icon">⏱</div>
@@ -267,7 +267,7 @@ function populateTeamSelector(text) {
   // Extract team abbr+name pairs from pasted text
   const teams = [];
   const seen = new Set();
-  const re = /([A-Z][A-Za-z\s]+?)\s*\(([A-Z]{2,3})\)\s*[	\s]+([\d]+\.?\d*)/g;
+  const re = /([A-Z][A-Za-z\s]+?)\s*\(([A-Z]{1,3})\)\s*[	\s]+([\d]+\.?\d*)/g;
   let m;
   const fullText = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').replace(/\n/g,' ');
   while ((m = re.exec(fullText)) !== null) {
@@ -394,7 +394,7 @@ function flipName(raw) {
 function parseMeetPage(text) {
   debugLog = [];
   const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').map(l=>l.trim()).filter(Boolean);
-  const meet = { meetName:'', daAbbr:'DA', oppName:'', daScore:null, oppScore:null, teams:[], events:[] };
+  const meet = { meetName:'', daAbbr:'', oppName:'', daScore:null, oppScore:null, teams:[], events:[] };
 
   // ── Meet title: "2025 Week 1 Dual Meet Damascus at Westleigh"
   for (const l of lines) {
@@ -405,27 +405,17 @@ function parseMeetPage(text) {
   }
   debugLog.push('Meet title: ' + meet.meetName);
 
-  // ── Team scores: "Damascus (DA)  405.5" style lines
-  // Also handle tab-separated: "Damascus (DA)\t405.5"
+  // ── Team scores: "TeamName (AB)  405.5" style lines
+  // Also handle tab-separated: "TeamName (AB)\t405.5"
   for (const l of lines) {
-    const m = l.match(/^([A-Z][A-Za-z\s]+?)\s*\(([A-Z]{2,3})\)\s*[\t\s]+([\d]+\.?\d*)$/);
+    const m = l.match(/^([A-Z][A-Za-z\s]+?)\s*\(([A-Z]{1,3})\)\s*[\t\s]+([\d]+\.?\d*)$/);
     if (m) {
       const name=m[1].trim(), abbr=m[2], score=parseFloat(m[3]);
       meet.teams.push({name, abbr, score});
-      if (/damascus/i.test(name) || abbr==='DA') {
-        meet.daAbbr=abbr; meet.daScore=score;
-      } else {
-        meet.oppName=name; meet.oppScore=score;
-      }
+      // daAbbr/oppName set after user selects team in UI
     }
   }
-  // Fallback: scan for score patterns in same line "Damascus (DA) 405.5 Westleigh (WL) 379.5"
-  if (meet.daScore===null) {
-    const joined = lines.join(' ');
-    const m = joined.match(/Damascus\s*\(DA\)\s+([\d.]+).*?(\w[\w\s]+?)\s*\(([A-Z]{2,3})\)\s+([\d.]+)/i);
-    if (m) { meet.daScore=parseFloat(m[1]); meet.oppName=m[2].trim(); meet.oppScore=parseFloat(m[4]); }
-  }
-  debugLog.push(`DA: ${meet.daAbbr} ${meet.daScore}  Opp: ${meet.oppName} ${meet.oppScore}`);
+  debugLog.push(`Teams found: ${JSON.stringify(meet.teams)}`);
 
   // ── Events
   // Header: "Event N - [Male/Female] [AgeGroup] [Distance]M [Stroke]"
@@ -463,7 +453,7 @@ function parseMeetPage(text) {
 
   debugLog.push(`Total events: ${meet.events.length}`);
   const daCount = meet.events.reduce((s,e)=>s+e.entries.filter(x=>x.team===meet.daAbbr).length,0);
-  debugLog.push(`Total DA entries: ${daCount}`);
+  debugLog.push(`Total selected-team entries: ${daCount}`);
 
   return meet;
 }
@@ -531,7 +521,7 @@ function parseEntryLine(line) {
   // 2. Extract team from "(DA)" or "(WL)" pattern — last such occurrence near name
   //    Format: "Last, First [MI] (age)(TEAM)"
   //    Team is always the last parenthetical before the times
-  const teamM = rest.match(/\(([A-Z]{2,3})\)(?=\s|$|\t)/);
+  const teamM = rest.match(/\(([A-Z]{1,3})\)(?=\s|$|\t)/);
   if (!teamM) return null;
   const team = teamM[1];
 
@@ -542,7 +532,7 @@ function parseEntryLine(line) {
 
   // 4. Extract just the name — strip age "(12)" and team "(DA)" from nameBlock
   //    "Zhao, Marc (10)(DA)" → "Zhao, Marc"
-  const rawName = nameBlock.replace(/\(\d+\)/g,'').replace(/\([A-Z]{2,3}\)/g,'').trim();
+  const rawName = nameBlock.replace(/\(\d+\)/g,'').replace(/\([A-Z]{1,3}\)/g,'').trim();
   const name = flipName(rawName);
 
   // 5. Parse times from rest — could be tabs or spaces
@@ -649,9 +639,15 @@ async function generate() {
 
   try {
     const meet=parseMeetPage(meetText);
-    // Override daAbbr if user selected a team
+    // Set daAbbr from user selection; fall back to first team found
     const selectedRadio = document.querySelector('input[name=selectedteam]:checked');
-    if (selectedRadio) meet.daAbbr = selectedRadio.value;
+    const selectedAbbr = selectedRadio ? selectedRadio.value : (meet.teams[0]?.abbr || '');
+    if (!selectedAbbr) { hideProgress(); showError('Could not detect teams. Check the pasted text includes the score table.'); document.getElementById('gen-btn').disabled=false; return; }
+    meet.daAbbr = selectedAbbr;
+    const oppTeam = meet.teams.find(t=>t.abbr!==selectedAbbr);
+    meet.oppName  = oppTeam?.name  || '';
+    meet.daScore  = meet.teams.find(t=>t.abbr===selectedAbbr)?.score ?? null;
+    meet.oppScore = oppTeam?.score ?? null;
     setProgress('Computing recap…');
     const recap=buildRecap(meet,dropsMap);
     document.getElementById('debug-box').textContent=debugLog.join('\n');
@@ -710,7 +706,7 @@ function buildRecap(meet, dropsMap) {
     }
   }
 
-  debugLog.push(`DA swimmers: ${Object.keys(swimmerMap).length}`);
+  debugLog.push(`Selected team swimmers: ${Object.keys(swimmerMap).length}`);
   if (Object.keys(swimmerMap).length>0)
     debugLog.push('Sample: '+JSON.stringify(Object.entries(swimmerMap)[0]));
 
@@ -794,7 +790,7 @@ function buildRecap(meet, dropsMap) {
   // ── Warnings
   const warns=[];
   if (events.length===0) warns.push('No events detected — format may not match expected MCSL layout.');
-  if (Object.keys(swimmerMap).length===0) warns.push(`No ${daAbbr} swimmer entries found. If you selected the wrong team, use the team selector above.`);
+  if (Object.keys(swimmerMap).length===0) warns.push(`No ${daAbbr} entries found. Try selecting the other team above.`);
   const seedCount=Object.values(swimmerDrops).reduce((a,b)=>a+Object.keys(b).length,0);
   if (seedCount===0&&Object.keys(swimmerMap).length>0)
     warns.push('No seed times found — drops section will be empty. Check that the results page includes a Seed Time column.');
@@ -817,7 +813,7 @@ function buildRecap(meet, dropsMap) {
   const opp=oppName?oppName.toUpperCase():'OPPONENT';
 
   // Format title: extract week number and A/B designation
-  // meetName e.g. "2025 Week 1 Dual Meet Damascus at Westleigh" or "2025 Week 1A Dual Meet..."
+  // meetName e.g. "2025 Week 1 Dual Meet TeamA at TeamB" or "2025 Week 1A Dual Meet..."
   const weekM = mName.match(/week\s*(\d+)\s*([AB])?/i);
   const weekNum = weekM ? weekM[1] : '?';
   const radioVal = (document.querySelector('input[name=meettype]:checked')||{value:'A'}).value;
