@@ -1,15 +1,8 @@
-# Swim Meet Recap Generator
+# MCSL Swim Meet Recap Generator
 
-A standalone HTML application for generating weekly meet recaps for any MCSL swim team. No server, no account, no API — open the file in any browser and it works.
+MCSL swim meet recap generator for any team. Paste any dual meet results page, select your team, and generate a formatted weekly recap: Top 5 Most Improved, Top Point Scorers, All-Star Qualifiers, Personal Bests, and drop-time buckets by second. MCSL All-Star nominating standards built in. Export to clipboard or Markdown.
 
----
-
-## Branches
-
-| Branch | Description |
-|---|---|
-| `main` | Damascus-specific — hardcoded for DA, optimized for Damascus workflows |
-| `any-team` | Generic — auto-detects both teams from the results; user selects which team to recap |
+No server, no account, no API — open the file in any browser and it works.
 
 ---
 
@@ -74,7 +67,7 @@ Standards are hardcoded from the official [MCSL nominating times](https://mcsl.o
 ## Exporting the Recap
 
 - **Copy Text** — copies the plain text to your clipboard, ready to paste into an email
-- **⬇ Download .md** — saves a Markdown file you can use in any Markdown-compatible editor or email client
+- **⬇ Download .md** — saves a Markdown file for any Markdown-compatible editor or email client
 
 ---
 
@@ -91,12 +84,12 @@ Seed Time    Final Time    Points
 
 Key format details it handles:
 - Swimmer names in `Last, First [MI] (age)(TEAM)` format → converted to `First Last`
-- Team abbreviation embedded in the name as `(DA)` or `(WL)`
+- Team abbreviation embedded in the name as `(DA)`, `(WL)`, etc.
 - Two time columns: seed first, final second
 - Points as the last column (plain integer)
 - `DQ`, `NS`, `SCR` entries (excluded from drops/scoring)
 - Half-point ties (e.g. `2.5` points)
-- Relay events (Events 27, 28, 49, 50) are automatically skipped
+- Relay events are automatically skipped
 
 If parsing produces unexpected results, click **"show parsing debug info"** below the output to inspect what the parser detected.
 
