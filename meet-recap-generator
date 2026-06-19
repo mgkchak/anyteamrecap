@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Swim Meet Recap Generator</title>
+<title>Damascus Swim — Meet Recap Generator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap');
@@ -95,32 +95,32 @@ h1{font-family:var(--fd);font-size:clamp(1.5rem,4vw,2.35rem);font-weight:700;let
 .debug-toggle{font-size:.7rem;color:var(--w40);cursor:pointer;text-decoration:underline;text-underline-offset:2px;display:block;text-align:center;margin-top:.6rem}
 .debug-box{background:var(--navy3);border:1px solid var(--border);border-radius:10px;padding:1rem;font-family:var(--fm);font-size:.7rem;color:var(--w40);white-space:pre-wrap;max-height:320px;overflow-y:auto;margin-top:.75rem;display:none}
 .debug-box.show{display:block}
+.mcsl-select{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:8px;padding:.45rem .7rem;font-family:var(--ff);font-size:.8rem;color:var(--w);outline:none;transition:border-color .2s;appearance:none;cursor:pointer}
+.mcsl-select:focus{border-color:var(--blue-l)}
+.mcsl-select option{background:var(--navy2);color:var(--w)}
+.team-row{display:grid;grid-template-columns:1fr auto 1fr;gap:.75rem;align-items:end;margin-bottom:1rem}
+.team-row .at-label{text-align:center;font-size:.7rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);padding-bottom:.45rem}
+.team-field label{font-size:.72rem;color:var(--w40);display:block;margin-bottom:.3rem}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="brand">
-      <div class="badge">🏊</div>
+      <div class="badge">DA</div>
       <h1>Meet Recap Generator</h1>
     </div>
-    <p class="tagline">MCSL Swim Meet Recap Generator</p>
+    <p class="tagline">Damascus Swim · MCSL</p>
   </header>
 
   <div class="slabel">Step 1 — Choose Input Method</div>
   <div class="tabs" id="mode-tabs">
     <button class="tab active" data-mode="paste" onclick="setMode('paste')">📋 Paste Results Page</button>
-    <button class="tab" data-mode="pdf" onclick="setMode('pdf')">📄 Upload PDFs</button>
+    <button class="tab" data-mode="pdf" onclick="setMode('pdf')">📄 B-Meet PDF</button>
   </div>
 
   <!-- PASTE MODE -->
   <div id="mode-paste">
-    <div class="card" id="team-selector-card" style="margin-bottom:1.1rem;display:none">
-      <div class="ctitle">Select Your Team</div>
-      <div class="csub">Choose which team to generate the recap for.</div>
-      <div id="team-radio-group" style="display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.5rem"></div>
-    </div>
-
     <div class="hint">
       <strong>How to copy the meet results page:</strong>
       <ol>
@@ -143,32 +143,39 @@ h1{font-family:var(--fd);font-size:clamp(1.5rem,4vw,2.35rem);font-weight:700;let
     <div class="file-status" id="paste-status"></div>
   </div>
 
-  <!-- PDF MODE -->
+  <!-- PDF MODE (B-Meet) -->
   <div id="mode-pdf" style="display:none">
     <div class="hint">
-      Upload the official meet results PDF <strong>and</strong> the drops/seed times PDF.
+      Upload the HY-TEK Meet Summary PDF from B-Meet. It contains both seed times and final times for Damascus swimmers. Select the home and away teams below.
     </div>
-    <div class="upload-grid">
-      <div class="card" id="card-results">
-        <div class="ctitle">Meet Results PDF</div>
-        <div class="csub">Official printed results for the meet.</div>
-        <div class="dz" id="dz-results">
-          <input type="file" accept=".pdf" onchange="handleFile('results',this)">
-          <div class="dz-icon">📋</div>
-          <div class="dz-txt"><b>Click or drag</b> PDF here</div>
-        </div>
-        <div class="file-status" id="status-results"></div>
+
+    <!-- Team selectors -->
+    <div class="team-row">
+      <div class="team-field">
+        <label>Home Team <span style="color:var(--gold);font-weight:600">@ (at)</span></label>
+        <select class="mcsl-select" id="b-home-team">
+          <option value="">Select home team…</option>
+        </select>
       </div>
-      <div class="card" id="card-drops">
-        <div class="ctitle">Drops / Seed Times PDF</div>
-        <div class="csub">Pre-meet seed times for your team's swimmers.</div>
-        <div class="dz" id="dz-drops">
-          <input type="file" accept=".pdf" onchange="handleFile('drops',this)">
-          <div class="dz-icon">⏱</div>
-          <div class="dz-txt"><b>Click or drag</b> PDF here</div>
-        </div>
-        <div class="file-status" id="status-drops"></div>
+      <div class="at-label">vs</div>
+      <div class="team-field">
+        <label>Away Team</label>
+        <select class="mcsl-select" id="b-away-team">
+          <option value="">Select away team…</option>
+        </select>
       </div>
+    </div>
+
+    <!-- PDF upload -->
+    <div class="card" id="card-bmeet">
+      <div class="ctitle">B-Meet Summary PDF</div>
+      <div class="csub">HY-TEK Meet Manager summary report with seed and final times for all Damascus swimmers.</div>
+      <div class="dz" id="dz-bmeet">
+        <input type="file" accept=".pdf" onchange="handleFile('bmeet',this)">
+        <div class="dz-icon">📋</div>
+        <div class="dz-txt"><b>Click or drag</b> PDF here</div>
+      </div>
+      <div class="file-status" id="status-bmeet"></div>
     </div>
   </div>
 
@@ -199,8 +206,61 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let mode = 'paste';
-let pdfText = { results:'', drops:'' };
+let pdfText = { results:'', drops:'', bmeet:'' };
 let debugLog = [];
+
+const MCSL_TEAMS = [
+  {name:"Damascus",abbr:"DA"},
+  {name:"Stonebridge",abbr:"SB"},{name:"Stonegate",abbr:"SG"},{name:"Woodcliffe",abbr:"WCF"},
+  {name:"Country Glen",abbr:"CG"},{name:"Rockville",abbr:"RV"},{name:"Wildwood Manor",abbr:"WM"},
+  {name:"River Falls",abbr:"RF"},{name:"Mohican",abbr:"MO"},{name:"Glenwood",abbr:"G"},
+  {name:"Darnestown",abbr:"DT"},{name:"Bethesda",abbr:"BE"},{name:"Flower Valley",abbr:"FV"},
+  {name:"Bannockburn",abbr:"B"},{name:"Clarksburg Village",abbr:"CLK"},
+  {name:"Regency Estates",abbr:"RE"},{name:"Robin Hood",abbr:"RH"},
+  {name:"Manchester Farm",abbr:"MCF"},{name:"Franklin Knolls",abbr:"FR"},
+  {name:"Connecticut Belair",abbr:"CB"},{name:"Potomac",abbr:"PO"},
+  {name:"Hallowell",abbr:"HA"},{name:"Kentlands",abbr:"KL"},{name:"Tallyho",abbr:"TH"},
+  {name:"Northwest Branch",abbr:"NWB"},{name:"Woodley Gardens",abbr:"WG"},
+  {name:"Manor Woods",abbr:"MW"},{name:"Old Farm",abbr:"OF"},
+  {name:"Chevy Chase Recreation Association",abbr:"CCR"},{name:"Old Georgetown",abbr:"OG"},
+  {name:"Tanterra",abbr:"TA"},{name:"Westleigh",abbr:"WL"},{name:"Merrimack Park",abbr:"MM"},
+  {name:"Tilden Woods",abbr:"TW"},{name:"Forest Knolls",abbr:"FO"},
+  {name:"Seven Locks",abbr:"SL"},{name:"Palisades",abbr:"PA"},
+  {name:"Mill Creek Towne",abbr:"MCT"},{name:"Little Falls",abbr:"LF"},
+  {name:"Daleview",abbr:"D"},{name:"Olney Mill",abbr:"OM"},{name:"Germantown",abbr:"GER"},
+  {name:"Cedarbrook",abbr:"C"},{name:"Calverton",abbr:"CA"},{name:"Garrett Park",abbr:"GP"},
+  {name:"Rock Creek",abbr:"RC"},{name:"North Chevy Chase",abbr:"NCC"},
+  {name:"Potomac Woods",abbr:"PW"},{name:"Somerset",abbr:"SO"},
+  {name:"Quince Orchard",abbr:"QO"},{name:"Carderock Springs",abbr:"CS"},
+  {name:"Washingtonian Woods",abbr:"WWD"},{name:"Poolesville",abbr:"PL"},
+  {name:"Inverness Recreation Club",abbr:"IF"},{name:"Glenmont",abbr:"GM"},
+  {name:"Montgomery Square",abbr:"MS"},{name:"West Hillandale",abbr:"WHI"},
+  {name:"Rockshire",abbr:"RS"},{name:"Kenmont",abbr:"K"},{name:"Potomac Glen",abbr:"PGL"},
+  {name:"King Farm",abbr:"KFM"},{name:"Waters Landing",abbr:"WTL"},
+  {name:"Plantations",abbr:"PLT"},{name:"Clopper Mill Kingsview",abbr:"CLM"},
+  {name:"Long Branch",abbr:"LB"},{name:"Arora Hills",abbr:"ARH"},{name:"Twin Farms",abbr:"TF"},
+  {name:"Willows of Potomac",abbr:"WLP"},{name:"Lakelands",abbr:"LLD"},
+  {name:"North Creek",abbr:"NO"},{name:"Lake Marion",abbr:"LM"},
+  {name:"New Mark Commons",abbr:"NMC"},{name:"Flower Hill",abbr:"FH"},
+  {name:"Fallsmead",abbr:"FM"},{name:"Hillandale",abbr:"H"},{name:"Norbeck Grove",abbr:"NGV"},
+  {name:"Quail Valley",abbr:"QV"},{name:"James Creek",abbr:"JC"},
+  {name:"Diamond Farm",abbr:"DF"},{name:"Norbeck Hills",abbr:"NH"},
+  {name:"Whetstone",abbr:"W"},{name:"Clarksburg Town Center",abbr:"CTC"},
+  {name:"Ashton",abbr:"A"},{name:"Poplar Run",abbr:"PR"},{name:"Twinbrook",abbr:"TB"},
+  {name:"Parkland",abbr:"P"},{name:"Eldwick",abbr:"EW"},{name:"Middlebridge",abbr:"MB"},
+  {name:"Upper County",abbr:"UC"},{name:"Kemp Mill",abbr:"KM"}
+].sort((a,b)=>a.name.localeCompare(b.name));
+
+// Populate team dropdowns
+function initTeamDropdowns() {
+  const opts = MCSL_TEAMS.map(t=>`<option value="${t.abbr}">${t.name} (${t.abbr})</option>`).join('');
+  document.getElementById('b-home-team').innerHTML += opts;
+  document.getElementById('b-away-team').innerHTML += opts;
+  // Default home = Damascus, away = blank
+  document.getElementById('b-home-team').value = 'DA';
+}
+document.addEventListener('DOMContentLoaded', initTeamDropdowns);
+
 
 // ── All-Star Standards ────────────────────────────────────────────────────────
 function sec(t) {
@@ -253,66 +313,8 @@ function onPasteInput() {
   const has=ta.value.trim().length>50;
   ta.classList.toggle('has-content',has);
   const st=document.getElementById('paste-status');
-  if(has){
-    st.textContent='✓ Content ready — click Generate';
-    st.className='file-status show ok';
-    populateTeamSelector(ta.value);
-  } else {
-    st.className='file-status';
-    document.getElementById('team-selector-card').style.display='none';
-  }
-}
-
-function populateTeamSelector(text) {
-  const teams = [];
-  const seen = new Set();
-  const normalized = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-  const sLines = normalized.split('\n').map(l=>l.trim()).filter(Boolean);
-
-  for (let i = 0; i < sLines.length; i++) {
-    const l = sLines[i];
-    // Same-line score: "TeamName (AB)  405.5"
-    const sameLine = l.match(/^([A-Z][A-Za-z\s&.'\-]+?)\s*\(([A-Z]{1,3})\)\s*[\t\s]+(\d+\.?\d*)$/);
-    if (sameLine) {
-      const abbr=sameLine[2], name=sameLine[1].trim();
-      if (!seen.has(abbr)) { seen.add(abbr); teams.push({abbr, name}); }
-      continue;
-    }
-    // Split-line score: "TeamName (AB)" on one line, score on next
-    const nameOnly = l.match(/^([A-Z][A-Za-z\s&.'\-]+?)\s*\(([A-Z]{1,3})\)\s*$/);
-    if (nameOnly) {
-      const abbr=nameOnly[2], name=nameOnly[1].trim();
-      const next = sLines[i+1]?.trim();
-      if (next && /^\d+\.?\d*$/.test(next) && !seen.has(abbr)) {
-        seen.add(abbr); teams.push({abbr, name});
-      }
-      continue;
-    }
-  }
-  // Fallback: scan swimmer entries for team abbrs if score table parse missed them
-  if (teams.length < 2) {
-    const entryRe = /\(([A-Z]{1,3})\)(?=[\s\t]|$)/g;
-    let em; const entrySeen = new Set(teams.map(t=>t.abbr));
-    const fullText = normalized.replace(/\n/g,' ');
-    while ((em = entryRe.exec(fullText)) !== null) {
-      const abbr = em[1];
-      if (!entrySeen.has(abbr) && !['NT','DQ','NS','SCR','EXH'].includes(abbr)) {
-        entrySeen.add(abbr); teams.push({abbr, name: abbr});
-      }
-    }
-  }
-  if (teams.length < 2) {
-    document.getElementById('team-selector-card').style.display='none';
-    return;
-  }
-  const grp = document.getElementById('team-radio-group');
-  grp.innerHTML = teams.map((t,i) => `
-    <label style="display:flex;align-items:center;gap:.4rem;font-size:.85rem;cursor:pointer;background:var(--w04);border:1px solid var(--border);border-radius:8px;padding:.4rem .75rem">
-      <input type="radio" name="selectedteam" value="${t.abbr}" ${i===0?'checked':''} style="accent-color:var(--gold)">
-      <strong style="color:var(--w)">${t.abbr}</strong>
-      <span style="color:var(--w40)">${t.name}</span>
-    </label>`).join('');
-  document.getElementById('team-selector-card').style.display='block';
+  if(has){st.textContent='✓ Content ready — click Generate';st.className='file-status show ok';}
+  else{st.className='file-status';}
 }
 function setProgress(msg){document.getElementById('prog-msg').textContent=msg;document.getElementById('progress').className='progress show';}
 function hideProgress(){document.getElementById('progress').className='progress';}
@@ -350,9 +352,11 @@ async function processFile(which,file){
 }
 function showFileStatus(which,msg,ok){
   const el=document.getElementById('status-'+which);
+  if(!el)return;
   el.textContent=(ok?'✓ ':'✗ ')+msg;
   el.className='file-status show '+(ok?'ok':'err');
 }
+
 
 // ── PDF extraction ────────────────────────────────────────────────────────────
 async function extractPDF(file) {
@@ -421,7 +425,7 @@ function flipName(raw) {
 function parseMeetPage(text) {
   debugLog = [];
   const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').map(l=>l.trim()).filter(Boolean);
-  const meet = { meetName:'', daAbbr:'', oppName:'', daScore:null, oppScore:null, teams:[], events:[] };
+  const meet = { meetName:'', daAbbr:'DA', oppName:'', daScore:null, oppScore:null, events:[] };
 
   // ── Meet title: "2025 Week 1 Dual Meet Damascus at Westleigh"
   for (const l of lines) {
@@ -432,28 +436,26 @@ function parseMeetPage(text) {
   }
   debugLog.push('Meet title: ' + meet.meetName);
 
-  // ── Team scores — handle both same-line and next-line score formats:
-  // "Damascus (DA)  405.5"  OR  "Damascus (DA)\n405.5"
-  for (let i = 0; i < lines.length; i++) {
-    const l = lines[i];
-    // Try same-line first: "TeamName (AB)  405.5"
-    const sameLine = l.match(/^([A-Z][A-Za-z\s&.'-]+?)\s*\(([A-Z]{1,3})\)\s*[\t\s]+(\d+\.?\d*)$/);
-    if (sameLine) {
-      const name=sameLine[1].trim(), abbr=sameLine[2], score=parseFloat(sameLine[3]);
-      if (!meet.teams.find(t=>t.abbr===abbr)) meet.teams.push({name, abbr, score});
-      continue;
-    }
-    // Try name-only line followed by score on next line
-    const nameOnly = l.match(/^([A-Z][A-Za-z\s&.'-]+?)\s*\(([A-Z]{1,3})\)\s*$/);
-    if (nameOnly) {
-      const name=nameOnly[1].trim(), abbr=nameOnly[2];
-      const nextLine = lines[i+1]?.trim();
-      const score = nextLine && /^\d+\.?\d*$/.test(nextLine) ? parseFloat(nextLine) : null;
-      if (!meet.teams.find(t=>t.abbr===abbr)) meet.teams.push({name, abbr, score});
-      continue;
+  // ── Team scores: "Damascus (DA)  405.5" style lines
+  // Also handle tab-separated: "Damascus (DA)\t405.5"
+  for (const l of lines) {
+    const m = l.match(/^([A-Z][A-Za-z\s]+?)\s*\(([A-Z]{2,3})\)\s*[\t\s]+([\d]+\.?\d*)$/);
+    if (m) {
+      const name=m[1].trim(), abbr=m[2], score=parseFloat(m[3]);
+      if (/damascus/i.test(name) || abbr==='DA') {
+        meet.daAbbr=abbr; meet.daScore=score;
+      } else {
+        meet.oppName=name; meet.oppScore=score;
+      }
     }
   }
-  debugLog.push(`Teams found: ${JSON.stringify(meet.teams)}`);
+  // Fallback: scan for score patterns in same line "Damascus (DA) 405.5 Westleigh (WL) 379.5"
+  if (meet.daScore===null) {
+    const joined = lines.join(' ');
+    const m = joined.match(/Damascus\s*\(DA\)\s+([\d.]+).*?(\w[\w\s]+?)\s*\(([A-Z]{2,3})\)\s+([\d.]+)/i);
+    if (m) { meet.daScore=parseFloat(m[1]); meet.oppName=m[2].trim(); meet.oppScore=parseFloat(m[4]); }
+  }
+  debugLog.push(`DA: ${meet.daAbbr} ${meet.daScore}  Opp: ${meet.oppName} ${meet.oppScore}`);
 
   // ── Events
   // Header: "Event N - [Male/Female] [AgeGroup] [Distance]M [Stroke]"
@@ -491,7 +493,7 @@ function parseMeetPage(text) {
 
   debugLog.push(`Total events: ${meet.events.length}`);
   const daCount = meet.events.reduce((s,e)=>s+e.entries.filter(x=>x.team===meet.daAbbr).length,0);
-  debugLog.push(`Total selected-team entries: ${daCount}`);
+  debugLog.push(`Total DA entries: ${daCount}`);
 
   return meet;
 }
@@ -559,7 +561,7 @@ function parseEntryLine(line) {
   // 2. Extract team from "(DA)" or "(WL)" pattern — last such occurrence near name
   //    Format: "Last, First [MI] (age)(TEAM)"
   //    Team is always the last parenthetical before the times
-  const teamM = rest.match(/\(([A-Z]{1,3})\)(?=\s|$|\t)/);
+  const teamM = rest.match(/\(([A-Z]{2,3})\)(?=\s|$|\t)/);
   if (!teamM) return null;
   const team = teamM[1];
 
@@ -570,7 +572,7 @@ function parseEntryLine(line) {
 
   // 4. Extract just the name — strip age "(12)" and team "(DA)" from nameBlock
   //    "Zhao, Marc (10)(DA)" → "Zhao, Marc"
-  const rawName = nameBlock.replace(/\(\d+\)/g,'').replace(/\([A-Z]{1,3}\)/g,'').trim();
+  const rawName = nameBlock.replace(/\(\d+\)/g,'').replace(/\([A-Z]{2,3}\)/g,'').trim();
   const name = flipName(rawName);
 
   // 5. Parse times from rest — could be tabs or spaces
@@ -661,33 +663,40 @@ async function generate() {
   debugLog=[];
 
   let meetText='', dropsMap=null;
+  let isBmeet = (mode==='pdf');
 
   if (mode==='paste') {
     meetText=document.getElementById('paste-input').value;
     if (meetText.trim().length<50){showError('Please paste the meet results first.');return;}
+    isBmeet = document.querySelector('input[name=meettype]:checked')?.value === 'B';
   } else {
-    if (!pdfText.results){showError('Please upload the meet results PDF.');return;}
-    if (!pdfText.drops)  {showError('Please upload the drops/seed times PDF.');return;}
-    meetText=pdfText.results;
-    dropsMap=parseDropsPDF(pdfText.drops);
+    // B-Meet PDF mode
+    if (!pdfText.bmeet){showError('Please upload the B-Meet Summary PDF.');return;}
+    const homeAbbr = document.getElementById('b-home-team').value;
+    const awayAbbr = document.getElementById('b-away-team').value;
+    if (!homeAbbr){showError('Please select the home team.');return;}
+    if (!awayAbbr){showError('Please select the away team.');return;}
+    if (homeAbbr===awayAbbr){showError('Home and away teams must be different.');return;}
+    isBmeet = true;
   }
 
   document.getElementById('gen-btn').disabled=true;
   setProgress('Parsing meet results…');
 
   try {
-    const meet=parseMeetPage(meetText);
-    // Set daAbbr from user selection; fall back to first team found
-    const selectedRadio = document.querySelector('input[name=selectedteam]:checked');
-    const selectedAbbr = selectedRadio ? selectedRadio.value : (meet.teams[0]?.abbr || '');
-    if (!selectedAbbr) { hideProgress(); showError('Could not detect teams. Check the pasted text includes the score table.'); document.getElementById('gen-btn').disabled=false; return; }
-    meet.daAbbr = selectedAbbr;
-    const oppTeam = meet.teams.find(t=>t.abbr!==selectedAbbr);
-    meet.oppName  = oppTeam?.name  || '';
-    meet.daScore  = meet.teams.find(t=>t.abbr===selectedAbbr)?.score ?? null;
-    meet.oppScore = oppTeam?.score ?? null;
+    let meet;
+    if (isBmeet && mode==='pdf') {
+      // B-Meet PDF: parse HY-TEK summary format
+      const homeAbbr = document.getElementById('b-home-team').value;
+      const awayAbbr = document.getElementById('b-away-team').value;
+      const homeName = MCSL_TEAMS.find(t=>t.abbr===homeAbbr)?.name || homeAbbr;
+      const awayName = MCSL_TEAMS.find(t=>t.abbr===awayAbbr)?.name || awayAbbr;
+      meet = parseBmeetPDF(pdfText.bmeet, homeAbbr, homeName, awayAbbr, awayName);
+    } else {
+      meet = parseMeetPage(meetText);
+    }
     setProgress('Computing recap…');
-    const recap=buildRecap(meet,dropsMap);
+    const recap=buildRecap(meet,dropsMap,isBmeet);
     document.getElementById('debug-box').textContent=debugLog.join('\n');
     document.getElementById('recap-box').textContent=recap;
     document.getElementById('output-section').className='show';
@@ -703,16 +712,186 @@ async function generate() {
   document.getElementById('gen-btn').disabled=false;
 }
 
+
+// ── B-Meet PDF parser (HY-TEK Meet Manager Summary format) ───────────────────
+/*
+  Format per swimmer:
+    N  Last, First - Female - Age: 14 - ID#: XXXXXXXXXX
+    #5 Women 15-18 100 IM Finals  1:25.50  1:24.27  (5)  *
+    #15 Women 15-18 100 Free Finals  1:16.07  1:15.96  (4)  *
+
+  We parse:
+  - Swimmer name (flip Last, First → First Last)
+  - Gender from "Male"/"Female"
+  - Age → derive age group
+  - Each event line: event name, seed time, final time
+    * = time drop (used as confirmation but we compute ourselves)
+    NT = no seed time
+    DQ/NS = no final time
+
+  Returns a meet object in the same shape as parseMeetPage output
+  so buildRecap works unchanged.
+*/
+function parseBmeetPDF(text, homeAbbr, homeName, awayAbbr, awayName) {
+  debugLog = [];
+  const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').map(l=>l.trim()).filter(Boolean);
+
+  // Extract meet title from header line
+  // "2026-06-17 - Week 1B vs Clarksburg Village - 6/17/2026"
+  let meetTitle = '';
+  for (const l of lines) {
+    const m = l.match(/(\d{4}-\d{2}-\d{2}\s*-\s*.+?)\s*-\s*\d{1,2}\/\d{1,2}\/\d{4}/);
+    if (m) { meetTitle = m[1].trim(); break; }
+  }
+  // Fallback: first non-header line that looks like a title
+  if (!meetTitle) {
+    for (const l of lines) {
+      if (/week/i.test(l) && l.length < 80) { meetTitle = l; break; }
+    }
+  }
+  debugLog.push('B-Meet title: ' + meetTitle);
+
+  // Extract week number and letter from title
+  // "Week 1B" or "Week 1 B" or just use what's in the title
+  const weekM = meetTitle.match(/week\s*(\d+)\s*([AB])?/i);
+  const weekNum = weekM ? weekM[1] : '?';
+  const weekLetter = weekM && weekM[2] ? weekM[2].toUpperCase() : 'B';
+
+  const meet = {
+    meetName: meetTitle,
+    daAbbr: homeAbbr,   // DA = home team whose swimmers are listed
+    oppName: awayName,
+    daScore: null,
+    oppScore: null,
+    teams: [
+      {name: homeName, abbr: homeAbbr, score: null},
+      {name: awayName, abbr: awayAbbr, score: null}
+    ],
+    events: [],
+    // Store week info for title formatting
+    _weekNum: weekNum,
+    _weekLetter: weekLetter,
+  };
+
+  // ── Parse swimmer blocks ──────────────────────────────────────────────────
+  // Swimmer header: "N  Last, First - Female - Age: 14 - ID#: ..."
+  //   or with middle name handling: "Fensterseifer Fideli, Benjamin Fideli - Male - Age: 9"
+  const swimmerRe = /^\d+\s+([A-Z][A-Za-z\s,'-]+?)\s*-\s*(Male|Female)\s*-\s*Age:\s*(\d+)/i;
+  // Event line: "#5 Women 15-18 100 IM Finals  1:25.50  1:24.27  (5)  *"
+  const eventRe  = /^#(\d+)\s+(.+?)\s+Finals\s+(\S+)\s+(\S+)(?:\s+\((\d+)\))?/i;
+
+  let curSwimmer = null; // {name, gender, age, ageGroup}
+
+  for (const line of lines) {
+    // Swimmer header?
+    const sm = line.match(swimmerRe);
+    if (sm) {
+      const rawName = sm[1].trim();
+      const gender  = /female/i.test(sm[2]) ? 'F' : 'M';
+      const age     = parseInt(sm[3]);
+      curSwimmer = {
+        name: flipName(rawName),
+        gender,
+        age,
+        ageGroup: ageGroupFromAge(age),
+      };
+      debugLog.push(`Swimmer: ${curSwimmer.name} ${curSwimmer.gender} age ${age} → ${curSwimmer.ageGroup}`);
+      continue;
+    }
+
+    if (!curSwimmer) continue;
+
+    // Event line?
+    const em = line.match(eventRe);
+    if (!em) continue;
+
+    const eventDesc = em[2].trim();   // "Women 15-18 100 IM"
+    const seedStr   = em[3].trim();
+    const finalStr  = em[4].trim();
+    const place     = em[5] ? parseInt(em[5]) : null;
+
+    const seedSec  = /^(NT|NR)$/i.test(seedStr)  ? null : sec(seedStr);
+    const finalSec = /^(DQ|NS|SCR|EXH)$/i.test(finalStr) ? null : sec(finalStr);
+    if (!finalSec) continue; // skip non-finishers
+
+    // Parse event descriptor to get stroke, distance, ageGroup
+    const evInfo = parseEventDesc(eventDesc);
+    if (!evInfo.stroke) continue;
+
+    // Find or create event bucket (we group by stroke+ageGroup+gender+distance)
+    const evKey = `${evInfo.gender||curSwimmer.gender}|${evInfo.ageGroup||curSwimmer.ageGroup}|${evInfo.distance}|${evInfo.stroke}`;
+    let ev = meet.events.find(e=>e._key===evKey);
+    if (!ev) {
+      ev = {
+        _key: evKey,
+        gender: evInfo.gender || curSwimmer.gender,
+        ageGroup: evInfo.ageGroup || curSwimmer.ageGroup,
+        distance: evInfo.distance,
+        stroke: evInfo.stroke,
+        eventNum: parseInt(em[1]),
+        entries: []
+      };
+      meet.events.push(ev);
+    }
+
+    ev.entries.push({
+      place,
+      name: curSwimmer.name,
+      team: homeAbbr,
+      seedSec,
+      finalSec,
+      finalStr: finalStr,
+      points: 0  // B-meets don't score
+    });
+  }
+
+  debugLog.push(`B-Meet events: ${meet.events.length}`);
+  debugLog.push(`B-Meet total entries: ${meet.events.reduce((s,e)=>s+e.entries.length,0)}`);
+  return meet;
+}
+
+// Map swimmer age to MCSL age group string
+function ageGroupFromAge(age) {
+  if (age <= 6)  return '6U';
+  if (age <= 8)  return '8U';
+  if (age <= 10) return '9-10';
+  if (age <= 12) return '11-12';
+  if (age <= 14) return '13-14';
+  return '15-18';
+}
+
+// Parse event descriptor like "Women 15-18 100 IM" or "Men 9-10 25 Back"
+// Also handles "Mixed 12&U 100 IM", "Women 6&U 25 Free", "Men 7-8 25 Free"
+function parseEventDesc(str) {
+  str = str.replace(/\s+/g,' ').trim();
+  let gender = 'U';
+  const gm = str.match(/^(women|men|mixed|girls?|boys?)/i);
+  if (gm) {
+    const g = gm[0].toLowerCase();
+    gender = (g==='women'||g.startsWith('girl')) ? 'F' : (g==='men'||g.startsWith('boy')) ? 'M' : 'X';
+    str = str.slice(gm[0].length).trim();
+  }
+  let ageGroup = '';
+  // Handle "7-8" as "8U", "6&U"/"6U" as "6U", standard groups
+  const agm = str.match(/^(6\s*[&]?\s*[Uu](?:nder)?|6U|7[-–]8|8\s*[&]\s*[Uu](?:nder)?|8U|12\s*[&]\s*[Uu](?:nder)?|12U|9[-–]10|11[-–]12|13[-–]14|15[-–]18)/i);
+  if (agm) {
+    const raw = agm[0].replace(/\s/g,'').toLowerCase();
+    if (raw.startsWith('6')||raw==='7-8'||raw==='78') ageGroup='8U';  // 6&U and 7-8 both map to 8U for allstar
+    else if (raw.startsWith('8')) ageGroup='8U';
+    else if (raw.startsWith('12')) ageGroup='12U';
+    else ageGroup = raw.replace(/[–]/g,'-').replace(/under/,'').replace(/[^0-9\-]/g,'');
+    str = str.slice(agm[0].length).trim();
+  }
+  const dm = str.match(/^(\d+)\s*[Mm]?/);
+  const distance = dm ? dm[1] : '';
+  if (dm) str = str.slice(dm[0].length).trim();
+  const stroke = strokeFrom(str);
+  return {gender, ageGroup, distance, stroke};
+}
+
 // ── Recap builder ─────────────────────────────────────────────────────────────
-function buildRecap(meet, dropsMap) {
-  const {meetName,events}=meet;
-  const daAbbr=meet.daAbbr;
-  // Find selected team and opponent from teams array
-  const daTeamObj  = meet.teams.find(t=>t.abbr===daAbbr) || {name:daAbbr, score:meet.daScore};
-  const oppTeamObj = meet.teams.find(t=>t.abbr!==daAbbr) || {name:meet.oppName, score:meet.oppScore};
-  const daScore  = daTeamObj.score;
-  const oppScore = oppTeamObj.score;
-  const oppName  = oppTeamObj.name;
+function buildRecap(meet, dropsMap, isBmeet=false) {
+  const {meetName,daAbbr,oppName,daScore,oppScore,events}=meet;
 
   // Build swimmer map: name → {gender,ageGroup,totalPoints,firstPlaces,results[]}
   const swimmerMap={};
@@ -744,7 +923,7 @@ function buildRecap(meet, dropsMap) {
     }
   }
 
-  debugLog.push(`Selected team swimmers: ${Object.keys(swimmerMap).length}`);
+  debugLog.push(`DA swimmers: ${Object.keys(swimmerMap).length}`);
   if (Object.keys(swimmerMap).length>0)
     debugLog.push('Sample: '+JSON.stringify(Object.entries(swimmerMap)[0]));
 
@@ -828,7 +1007,7 @@ function buildRecap(meet, dropsMap) {
   // ── Warnings
   const warns=[];
   if (events.length===0) warns.push('No events detected — format may not match expected MCSL layout.');
-  if (Object.keys(swimmerMap).length===0) warns.push(`No ${daAbbr} entries found. Try selecting the other team above.`);
+  if (Object.keys(swimmerMap).length===0) warns.push(`No ${daAbbr} swimmer entries found.`);
   const seedCount=Object.values(swimmerDrops).reduce((a,b)=>a+Object.keys(b).length,0);
   if (seedCount===0&&Object.keys(swimmerMap).length>0)
     warns.push('No seed times found — drops section will be empty. Check that the results page includes a Seed Time column.');
@@ -851,13 +1030,12 @@ function buildRecap(meet, dropsMap) {
   const opp=oppName?oppName.toUpperCase():'OPPONENT';
 
   // Format title: extract week number and A/B designation
-  // meetName e.g. "2025 Week 1 Dual Meet TeamA at TeamB" or "2025 Week 1A Dual Meet..."
+  // meetName e.g. "2025 Week 1 Dual Meet Damascus at Westleigh" or "2025 Week 1A Dual Meet..."
   const weekM = mName.match(/week\s*(\d+)\s*([AB])?/i);
-  const weekNum = weekM ? weekM[1] : '?';
+  const weekNum = meet._weekNum || (weekM ? weekM[1] : '?');
   const radioVal = (document.querySelector('input[name=meettype]:checked')||{value:'A'}).value;
-  const weekLetter = weekM && weekM[2] ? weekM[2].toUpperCase() : radioVal;
-  const daTeamName = (daTeamObj?.name || daAbbr).toUpperCase();
-  const formattedTitle = `Week ${weekNum} ${weekLetter}-Meet: ${daTeamName} (${da}) VS ${opp} (${os})`;
+  const weekLetter = meet._weekLetter || (weekM && weekM[2] ? weekM[2].toUpperCase() : (isBmeet ? 'B' : radioVal));
+  const formattedTitle = `Week ${weekNum} ${weekLetter}-Meet: DAMASCUS (${da}) VS ${opp} (${os})`;
   o+=formattedTitle+'\n\n';
 
   o+=`Top 5 Most Improved\n`;
@@ -867,19 +1045,21 @@ function buildRecap(meet, dropsMap) {
   } else { o+=`(No seed time data available)\n`; }
   o+='\n';
 
-  o+=`Top Point Scorers\n`;
-  if (topG) {
-    const fp=topG.fp;
-    const each=topG.names.length>1?' each':'';
-    o+=`Girls - ${nameList(topG.names)} with ${topG.pts} points and ${fp} first place finish${fp!==1?'es':''}${each}\n`;
+  if (!isBmeet) {
+    o+=`Top Point Scorers\n`;
+    if (topG) {
+      const fp=topG.fp;
+      const each=topG.names.length>1?' each':'';
+      o+=`Girls - ${nameList(topG.names)} with ${topG.pts} points and ${fp} first place finish${fp!==1?'es':''}${each}\n`;
+    }
+    if (topB) {
+      const fp=topB.fp;
+      const each=topB.names.length>1?' each':'';
+      o+=`Boys - ${nameList(topB.names)} with ${topB.pts} points and ${fp} first place finish${fp!==1?'es':''}${each}\n`;
+    }
+    if (!topG&&!topB) o+=`(No scoring data found)\n`;
+    o+='\n';
   }
-  if (topB) {
-    const fp=topB.fp;
-    const each=topB.names.length>1?' each':'';
-    o+=`Boys - ${nameList(topB.names)} with ${topB.pts} points and ${fp} first place finish${fp!==1?'es':''}${each}\n`;
-  }
-  if (!topG&&!topB) o+=`(No scoring data found)\n`;
-  o+='\n';
 
   o+=`All-Star Qualifiers\n`;
   if (quals.length) {
