@@ -1038,7 +1038,7 @@ function buildRecap(meet, dropsMap, isBmeet=false) {
   const formattedTitle = `Week ${weekNum} ${weekLetter}-Meet: DAMASCUS (${da}) VS ${opp} (${os})`;
   o+=formattedTitle+'\n\n';
 
-  o+=`Top 5 Most Improved\n`;
+  o+=`Top 5 Most Improved (3+ Strokes)\n`;
   if (mostImproved.length) {
     for (const [name,info] of mostImproved)
       o+=`${name} dropped a combined ${info.total.toFixed(2)} seconds across ${strokeList(info.strokes)}\n`;
