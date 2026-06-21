@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Damascus Swim — Meet Recap Generator</title>
+<title>MCSL Meet Recap Generator</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=DM+Mono:wght@400;500&display=swap');
@@ -107,37 +107,28 @@ h1{font-family:var(--fd);font-size:clamp(1.5rem,4vw,2.35rem);font-weight:700;let
 <div class="wrap">
   <header>
     <div class="brand">
-      <div class="badge">DA</div>
+      <div class="badge" style="font-size:20px;background:var(--gold)">🏊</div>
       <h1>Meet Recap Generator</h1>
     </div>
-    <p class="tagline">Damascus Swim · MCSL</p>
+    <p class="tagline">Montgomery County Swim League · MCSL</p>
   </header>
 
   <div class="slabel">Step 1 — Choose Input Method</div>
   <div class="tabs" id="mode-tabs">
-    <button class="tab active" data-mode="paste" onclick="setMode('paste')">📋 Paste Results Page</button>
-    <button class="tab" data-mode="pdf" onclick="setMode('pdf')">📄 B-Meet PDF</button>
+    <button class="tab active" data-mode="paste" onclick="setMode('paste')">📋 A-Meet (Paste Results)</button>
+    <button class="tab" data-mode="pdf" onclick="setMode('pdf')">📄 B-Meet (Upload PDF)</button>
   </div>
 
   <!-- PASTE MODE -->
   <div id="mode-paste">
     <div class="hint">
-      <strong>How to copy the meet results page:</strong>
+      <strong>How to copy the meet results:</strong>
       <ol>
-        <li>Open your MCSL results page (e.g. <code>mcsl.org/display-results-dual/2025/week1/DA-WL</code>) while logged in</li>
-        <li>Press <strong>Ctrl+A</strong> to select all, then <strong>Ctrl+C</strong> to copy</li>
-        <li>Click in the box below and press <strong>Ctrl+V</strong> to paste</li>
+        <li>Visit <strong>mcsl.org</strong>, select <strong>Meet Results</strong> from the left-hand menu, then select the year and week</li>
+        <li>Scroll down to the meet you want, then click to open it</li>
+        <li>Select everything from <strong>20XX Week [#] Dual Meet [Team] at [Team]</strong> at the top all the way through the last result at the bottom of the page</li>
+        <li>Copy (<strong>Ctrl+C</strong>), then paste below (<strong>Ctrl+V</strong>)</li>
       </ol>
-      Seed times are pulled from the results page automatically — no separate file needed.
-    </div>
-    <div style="display:flex;align-items:center;gap:.75rem;margin-bottom:.75rem">
-      <span style="font-size:.78rem;color:var(--w40);">Meet type:</span>
-      <label style="display:flex;align-items:center;gap:.3rem;font-size:.82rem;cursor:pointer">
-        <input type="radio" name="meettype" value="A" checked style="accent-color:var(--gold)"> A-Meet
-      </label>
-      <label style="display:flex;align-items:center;gap:.3rem;font-size:.82rem;cursor:pointer">
-        <input type="radio" name="meettype" value="B" style="accent-color:var(--gold)"> B-Meet
-      </label>
     </div>
     <textarea class="paste-area" id="paste-input" placeholder="Paste meet results text here…" oninput="onPasteInput()"></textarea>
     <div class="file-status" id="paste-status"></div>
@@ -146,7 +137,7 @@ h1{font-family:var(--fd);font-size:clamp(1.5rem,4vw,2.35rem);font-weight:700;let
   <!-- PDF MODE (B-Meet) -->
   <div id="mode-pdf" style="display:none">
     <div class="hint">
-      Upload the HY-TEK Meet Summary PDF from B-Meet. It contains both seed times and final times for Damascus swimmers. Select the home and away teams below.
+      Upload the HY-TEK Meet Manager summary PDF. It contains seed and final times for all swimmers. Select the home and away teams below.
     </div>
 
     <!-- Team selectors -->
@@ -169,7 +160,7 @@ h1{font-family:var(--fd);font-size:clamp(1.5rem,4vw,2.35rem);font-weight:700;let
     <!-- PDF upload -->
     <div class="card" id="card-bmeet">
       <div class="ctitle">B-Meet Summary PDF</div>
-      <div class="csub">HY-TEK Meet Manager summary report with seed and final times for all Damascus swimmers.</div>
+      <div class="csub">HY-TEK Meet Manager summary report with seed and final times for all swimmers.</div>
       <div class="dz" id="dz-bmeet">
         <input type="file" accept=".pdf" onchange="handleFile('bmeet',this)">
         <div class="dz-icon">📋</div>
@@ -199,6 +190,10 @@ h1{font-family:var(--fd);font-size:clamp(1.5rem,4vw,2.35rem);font-weight:700;let
     <span class="debug-toggle" onclick="toggleDebug()">show parsing debug info</span>
     <div class="debug-box" id="debug-box"></div>
   </div>
+  <footer style="margin-top:3rem;padding-top:1.5rem;border-top:1px solid var(--border);text-align:center;font-size:.72rem;color:var(--w40);line-height:1.7">
+    Created by Melanie Kurimchak in collaboration with Claude Sonnet 4.6 (Anthropic).<br>
+    Melanie conceived the tool, defined all requirements, tested functionality, and directed development through iterative feedback.
+  </footer>
 </div>
 
 <script>
@@ -206,7 +201,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let mode = 'paste';
-let pdfText = { results:'', drops:'', bmeet:'' };
+let pdfText = { bmeet:'' };
 let debugLog = [];
 
 const MCSL_TEAMS = [
@@ -256,8 +251,7 @@ function initTeamDropdowns() {
   const opts = MCSL_TEAMS.map(t=>`<option value="${t.abbr}">${t.name} (${t.abbr})</option>`).join('');
   document.getElementById('b-home-team').innerHTML += opts;
   document.getElementById('b-away-team').innerHTML += opts;
-  // Default home = Damascus, away = blank
-  document.getElementById('b-home-team').value = 'DA';
+
 }
 document.addEventListener('DOMContentLoaded', initTeamDropdowns);
 
@@ -442,18 +436,10 @@ function parseMeetPage(text) {
     const m = l.match(/^([A-Z][A-Za-z\s]+?)\s*\(([A-Z]{2,3})\)\s*[\t\s]+([\d]+\.?\d*)$/);
     if (m) {
       const name=m[1].trim(), abbr=m[2], score=parseFloat(m[3]);
-      if (/damascus/i.test(name) || abbr==='DA') {
-        meet.daAbbr=abbr; meet.daScore=score;
-      } else {
-        meet.oppName=name; meet.oppScore=score;
-      }
+      // daAbbr and opponent resolved in generate() after DA detection
+      if (abbr==='DA') { meet.daAbbr=abbr; meet.daScore=score; }
+      else { meet.oppName=name; meet.oppScore=score; }
     }
-  }
-  // Fallback: scan for score patterns in same line "Damascus (DA) 405.5 Westleigh (WL) 379.5"
-  if (meet.daScore===null) {
-    const joined = lines.join(' ');
-    const m = joined.match(/Damascus\s*\(DA\)\s+([\d.]+).*?(\w[\w\s]+?)\s*\(([A-Z]{2,3})\)\s+([\d.]+)/i);
-    if (m) { meet.daScore=parseFloat(m[1]); meet.oppName=m[2].trim(); meet.oppScore=parseFloat(m[4]); }
   }
   debugLog.push(`DA: ${meet.daAbbr} ${meet.daScore}  Opp: ${meet.oppName} ${meet.oppScore}`);
 
@@ -615,60 +601,19 @@ function parseEntryLine(line) {
 
 // ── Drops PDF parser ──────────────────────────────────────────────────────────
 // For PDF mode: returns { "First Last": { "Free":sec, "Back":sec, ... } }
-function parseDropsPDF(text) {
-  const map={};
-  const lines=text.split('\n').map(l=>l.trim()).filter(Boolean);
-  for (const line of lines) {
-    // Tab-separated: Name \t EventDesc \t Time
-    const parts=line.split(/\t+/).map(s=>s.trim()).filter(Boolean);
-    if (parts.length>=3) {
-      const timePart=parts.find(p=>/^((?:\d+:)?\d{1,2}\.\d{2})$/.test(p));
-      if (timePart) {
-        const name=flipName(parts[0]);
-        const stroke=strokeFrom(parts.slice(1,parts.indexOf(timePart)).join(' '));
-        if (!map[name])map[name]={};
-        map[name][stroke]=sec(timePart);
-        continue;
-      }
-    }
-    // Space-separated fallback
-    const m=line.match(/^([A-Za-z][A-Za-z',.\s-]+?)\s{2,}(.+?)\s{2,}((?:\d+:)?\d{1,2}\.\d{2})\s*$/);
-    if (m) {
-      const name=flipName(m[1]);
-      const stroke=strokeFrom(m[2]);
-      if (!map[name])map[name]={};
-      map[name][stroke]=sec(m[3]);
-    }
-  }
-  debugLog.push('Drops entries: '+Object.keys(map).length);
-  return map;
-}
 
-function lookupSeed(name, stroke, dropsMap) {
-  if (!dropsMap) return null;
-  const try1=dropsMap[name];
-  if (try1&&try1[stroke]!==undefined) return try1[stroke];
-  // fuzzy: last name match
-  const last=name.split(' ').pop().toLowerCase();
-  for (const [k,v] of Object.entries(dropsMap)) {
-    if (k.split(' ').pop().toLowerCase()===last && v[stroke]!==undefined) return v[stroke];
-  }
-  return null;
-}
-
-// ── Main generate ─────────────────────────────────────────────────────────────
 async function generate() {
   clearError(); showWarnings([]);
   document.getElementById('output-section').className='';
   debugLog=[];
 
-  let meetText='', dropsMap=null;
+  let meetText='';
   let isBmeet = (mode==='pdf');
 
   if (mode==='paste') {
     meetText=document.getElementById('paste-input').value;
     if (meetText.trim().length<50){showError('Please paste the meet results first.');return;}
-    isBmeet = document.querySelector('input[name=meettype]:checked')?.value === 'B';
+    isBmeet = false; // Paste mode is always A-meet
   } else {
     // B-Meet PDF mode
     if (!pdfText.bmeet){showError('Please upload the B-Meet Summary PDF.');return;}
@@ -696,7 +641,7 @@ async function generate() {
       meet = parseMeetPage(meetText);
     }
     setProgress('Computing recap…');
-    const recap=buildRecap(meet,dropsMap,isBmeet);
+    const recap=buildRecap(meet,isBmeet);
     document.getElementById('debug-box').textContent=debugLog.join('\n');
     document.getElementById('recap-box').textContent=recap;
     document.getElementById('output-section').className='show';
@@ -890,7 +835,7 @@ function parseEventDesc(str) {
 }
 
 // ── Recap builder ─────────────────────────────────────────────────────────────
-function buildRecap(meet, dropsMap, isBmeet=false) {
+function buildRecap(meet, isBmeet=false) {
   const {meetName,daAbbr,oppName,daScore,oppScore,events}=meet;
 
   // Build swimmer map: name → {gender,ageGroup,totalPoints,firstPlaces,results[]}
@@ -908,11 +853,8 @@ function buildRecap(meet, dropsMap, isBmeet=false) {
       sw.totalPoints+=en.points;
       if (en.place===1) sw.firstPlaces++;
 
-      // Seed: inline from page (paste mode) or from dropsMap (PDF mode)
+      // Seed: from inline data (paste) or B-meet PDF parser
       let seedSec=en.seedSec;
-      if ((seedSec===null||seedSec===undefined)&&dropsMap) {
-        seedSec=lookupSeed(en.name,ev.stroke,dropsMap);
-      }
 
       sw.results.push({
         stroke:ev.stroke, distance:ev.distance,
@@ -1033,12 +975,14 @@ function buildRecap(meet, dropsMap, isBmeet=false) {
   // meetName e.g. "2025 Week 1 Dual Meet Damascus at Westleigh" or "2025 Week 1A Dual Meet..."
   const weekM = mName.match(/week\s*(\d+)\s*([AB])?/i);
   const weekNum = meet._weekNum || (weekM ? weekM[1] : '?');
-  const radioVal = (document.querySelector('input[name=meettype]:checked')||{value:'A'}).value;
-  const weekLetter = meet._weekLetter || (weekM && weekM[2] ? weekM[2].toUpperCase() : (isBmeet ? 'B' : radioVal));
-  const formattedTitle = `Week ${weekNum} ${weekLetter}-Meet: DAMASCUS (${da}) VS ${opp} (${os})`;
+  const weekLetter = meet._weekLetter || (weekM && weekM[2] ? weekM[2].toUpperCase() : (isBmeet ? 'B' : 'A'));
+  const daName = (MCSL_TEAMS.find(t=>t.abbr===daAbbr)?.name || daAbbr).toUpperCase();
+  const formattedTitle = isBmeet
+    ? `Week ${weekNum} B-Meet: ${opp} at ${daName}`
+    : `Week ${weekNum} ${weekLetter}-Meet: ${daName} (${da}) VS ${opp} (${os})`;
   o+=formattedTitle+'\n\n';
 
-  o+=`Top 5 Most Improved (3+ Strokes)\n`;
+  o+=`Top 5 Most Improved (3+ Events)\n`;
   if (mostImproved.length) {
     for (const [name,info] of mostImproved)
       o+=`${name} dropped a combined ${info.total.toFixed(2)} seconds across ${strokeList(info.strokes)}\n`;
@@ -1069,7 +1013,7 @@ function buildRecap(meet, dropsMap, isBmeet=false) {
 
   o+=`Personal Bests\n`;
   o+=`We had ${pbCount} new personal best${pbCount!==1?'s':''} across the team.\n`;
-  if (biggest) o+=`\nBiggest drop: ${biggest.name} dropped ${biggest.dropSec.toFixed(2)} in ${biggest.stroke}\n`;
+  if (biggest) o+=`\nBiggest single-event drop: ${biggest.name} dropped ${biggest.dropSec.toFixed(2)} in ${biggest.stroke}\n`;
   o+='\n';
 
   const maxB=Object.keys(buckets).length?Math.max(...Object.keys(buckets).map(Number)):1;
