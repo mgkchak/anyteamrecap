@@ -1,10 +1,33 @@
 # Changelog
 
-All notable changes to the Damascus Swim Meet Recap Generator.
+All notable changes to the MCSL Meet Recap Generator.
 
 ---
 
-## [Current] — 2026-06-18
+## [2026-06-21] — UI Polish & Cleanup
+
+### Changed
+- **App title & branding** — renamed to "MCSL Meet Recap Generator"; tagline updated to "Montgomery County Swim League · MCSL"; badge updated to swimmer emoji 🏊
+- **Tab labels** — paste tab renamed to "📋 A-Meet (Paste Results)"; PDF tab renamed to "📄 B-Meet (Upload PDF)"
+- **Paste instructions** — updated to reflect exact mcsl.org navigation steps; removed unnecessary seed time note
+- **Most Improved heading** — "Top 5 Most Improved" → "Top 5 Most Improved (3+ Events)"
+- **Biggest drop label** — "Biggest drop:" → "Biggest single-event drop:"
+- **Meet title** — home team name now resolved dynamically from MCSL team list; no longer hardcoded
+- **B-meet team dropdowns** — removed Damascus pre-selection; both dropdowns start at blank prompt
+- **B-meet hint text** — removed reference to "Damascus swimmers"; now team-agnostic
+
+### Removed
+- Meet type A/B radio buttons (paste mode is always A-meet)
+- `parseDropsPDF` and `lookupSeed` functions (dead code from earlier dual-PDF approach)
+- `dropsMap` variable and all related threading through recap builder
+- Hardcoded "DAMASCUS" from title output
+
+### Added
+- AI attribution footer
+
+---
+
+## [2026-06-18] — B-Meet Support
 
 ### Added
 - **B-Meet PDF upload mode** — new tab for uploading HY-TEK Meet Manager summary PDFs from B-meets
@@ -22,7 +45,7 @@ All notable changes to the Damascus Swim Meet Recap Generator.
 
 ---
 
-## [2025 Season] — 2025-06-xx
+## [2025-06-xx] — 2025 Season
 
 ### Added
 - **Most Improved filter** — now requires drops in 3 or more events (previously any number of drops)
