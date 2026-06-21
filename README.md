@@ -1,6 +1,6 @@
-# Damascus Swim — Meet Recap Generator
+# MCSL Meet Recap Generator
 
-Swim meet recap generator for the Damascus (DA) swim team. Paste the MCSL meet results page to instantly generate a weekly recap: Top 5 Most Improved, Top Point Scorers, All-Star Qualifiers, Personal Bests, and drop-time buckets by second. MCSL All-Star nominating standards built in. Export to clipboard or Markdown.
+Swim meet recap generator for MCSL dual meets. Paste A-meet results or upload a B-meet PDF to instantly generate a formatted weekly recap: Top 5 Most Improved, Top Point Scorers, All-Star Qualifiers, Personal Bests, and drop-time buckets by second. MCSL All-Star nominating standards built in. Export to clipboard or Markdown.
 
 No server, no account, no API — open the file in any browser and it works.
 
@@ -8,22 +8,19 @@ No server, no account, no API — open the file in any browser and it works.
 
 ## How to Use
 
-### A-Meet: Paste Mode
+### A-Meet (Paste Results)
 
-1. Log in to [mcsl.org](https://mcsl.org) and navigate to your meet results page
-   - URL format: `mcsl.org/display-results-dual/2025/week1/DA-WL`
-2. Press **Ctrl+A** to select all, then **Ctrl+C** to copy
-3. Open the app, confirm **A-Meet** is selected, and paste into the text box
-4. Click **⚡ Generate Recap**
+1. Visit **mcsl.org** and select **Meet Results** from the left-hand menu, then select the year and week
+2. Scroll down to the meet you want and click to open it
+3. Select everything from **20XX Week [#] Dual Meet [Team] at [Team]** at the top all the way through the last result at the bottom of the page
+4. Copy (**Ctrl+C**), then paste into the box (**Ctrl+V**)
+5. Click **⚡ Generate Recap**
 
-Seed times are embedded in the MCSL results page — no separate file needed.
+### B-Meet (Upload PDF)
 
-### B-Meet: PDF Upload
-
-1. Switch to the **📄 B-Meet PDF** tab
+1. Switch to the **📄 B-Meet (Upload PDF)** tab
 2. Select the **Home Team** and **Away Team** from the dropdowns
-   - Damascus is pre-selected as the home team
-3. Upload the HY-TEK Meet Manager **Meet Summary PDF** (the file containing seed and final times for all Damascus swimmers)
+3. Upload the HY-TEK Meet Manager **Meet Summary PDF**
 4. Click **⚡ Generate Recap**
 
 ---
@@ -33,7 +30,7 @@ Seed times are embedded in the MCSL results page — no separate file needed.
 | Section | A-Meet | B-Meet |
 |---|:---:|:---:|
 | Meet header (teams + scores) | ✓ | ✓ (no scores) |
-| Top 5 Most Improved | ✓ | ✓ |
+| Top 5 Most Improved (3+ Events) | ✓ | ✓ |
 | Top Point Scorers | ✓ | — |
 | All-Star Qualifiers | ✓ | ✓ |
 | Personal Bests | ✓ | ✓ |
@@ -47,7 +44,8 @@ Seed times are embedded in the MCSL results page — no separate file needed.
 - Drop = `seed time − final time`
 - Bucketed by **floor**: 2.00–2.99 = 2-second drop, 3.00–3.99 = 3-second drop, etc.
 - Only individual drops ≥ 2 seconds appear in drop buckets
-- Most Improved uses **combined** drop across all events (no per-event minimum), requires drops in **3 or more events**
+- **Most Improved** requires drops in **3 or more events**; ranked by combined total drop; top 5 shown
+- **Biggest single-event drop** highlights the largest drop in any one event
 
 ---
 
@@ -89,9 +87,9 @@ Key details:
 - Team is the parenthetical at the end of the name: `(DA)`, `(WL)`, etc.
 - Two time columns: seed first, final second
 - Points as the last column
-- `DQ`, `NS`, `SCR` entries are excluded from all calculations
-- Half-point ties (e.g. `2.5`) are handled
-- Relay events are automatically skipped
+- `DQ`, `NS`, `SCR` entries excluded from all calculations
+- Half-point ties (e.g. `2.5`) handled correctly
+- Relay events automatically skipped
 
 ## B-Meet Parsing Notes
 
@@ -107,9 +105,9 @@ Key details:
 - One swimmer per block; name in `Last, First [MI]` format → converted to `First Last`
 - Gender and age parsed from the swimmer header line
 - Seed and final times are the two values after `Finals`
-- `NT` seed = no prior time (swimmer still counts for personal bests if they finish)
-- `DQ`, `NS`, `SCR`, `EXH` finals are excluded
-- Asterisk (`*`) denotes a drop per HY-TEK, but the app calculates drops independently
+- `NT` seed = no prior time (excluded from drops but counts toward personal bests if finished)
+- `DQ`, `NS`, `SCR`, `EXH` finals excluded entirely
+- Asterisk (`*`) denotes a drop per HY-TEK; the app calculates drops independently
 
 ---
 
@@ -120,3 +118,7 @@ Key details:
 | `swim-recap-generator.html` | The application — open in any browser |
 | `README.md` | This file |
 | `CHANGELOG.md` | Version history |
+
+---
+
+*Created by Melanie Kurimchak in collaboration with Claude Sonnet 4.6 (Anthropic). Melanie conceived the tool, defined all requirements, tested functionality, and directed development through iterative feedback.*
