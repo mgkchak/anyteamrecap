@@ -132,41 +132,74 @@ h1{font-family:var(--fd);font-size:clamp(1.5rem,4vw,2.35rem);font-weight:700;let
     </div>
     <textarea class="paste-area" id="paste-input" placeholder="Paste meet results text here…" oninput="onPasteInput()"></textarea>
     <div class="file-status" id="paste-status"></div>
+
+    <!-- Team selectors: revealed after paste, populated from detected teams -->
+    <div id="a-team-selectors" style="display:none;margin-top:1rem">
+      <div class="team-row" style="margin-bottom:.75rem">
+        <div class="team-field">
+          <label>Home Team <span style="color:var(--gold);font-weight:600">@ (at)</span></label>
+          <select class="mcsl-select" id="a-home-team">
+            <option value="">Select home team…</option>
+          </select>
+        </div>
+        <div class="at-label">vs</div>
+        <div class="team-field">
+          <label>Away Team</label>
+          <select class="mcsl-select" id="a-away-team">
+            <option value="">Select away team…</option>
+          </select>
+        </div>
+      </div>
+      <div class="team-field" style="margin-bottom:.5rem">
+        <label>Generate recap for</label>
+        <select class="mcsl-select" id="a-recap-team">
+          <option value="">Select team to recap…</option>
+        </select>
+      </div>
+    </div>
   </div>
 
   <!-- PDF MODE (B-Meet) -->
   <div id="mode-pdf" style="display:none">
     <div class="hint">
-      Upload the HY-TEK Meet Manager summary PDF. It contains seed and final times for all swimmers. Select the home and away teams below.
+      Upload the meet recap PDF. Teams will be detected automatically from the file.
     </div>
 
-    <!-- Team selectors -->
-    <div class="team-row">
-      <div class="team-field">
-        <label>Home Team <span style="color:var(--gold);font-weight:600">@ (at)</span></label>
-        <select class="mcsl-select" id="b-home-team">
-          <option value="">Select home team…</option>
-        </select>
-      </div>
-      <div class="at-label">vs</div>
-      <div class="team-field">
-        <label>Away Team</label>
-        <select class="mcsl-select" id="b-away-team">
-          <option value="">Select away team…</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- PDF upload -->
+    <!-- PDF upload first -->
     <div class="card" id="card-bmeet">
-      <div class="ctitle">B-Meet Summary PDF</div>
-      <div class="csub">HY-TEK Meet Manager summary report with seed and final times for all swimmers.</div>
+      <div class="ctitle">B-Meet PDF</div>
+      <div class="csub">Upload the meet recap PDF. Teams will be detected automatically from the file.</div>
       <div class="dz" id="dz-bmeet">
         <input type="file" accept=".pdf" onchange="handleFile('bmeet',this)">
         <div class="dz-icon">📋</div>
         <div class="dz-txt"><b>Click or drag</b> PDF here</div>
       </div>
       <div class="file-status" id="status-bmeet"></div>
+    </div>
+
+    <!-- Team selectors: revealed after PDF upload, populated from detected teams -->
+    <div id="b-team-selectors" style="display:none">
+      <div class="team-row" style="margin-bottom:.75rem">
+        <div class="team-field">
+          <label>Home Team <span style="color:var(--gold);font-weight:600">@ (at)</span></label>
+          <select class="mcsl-select" id="b-home-team">
+            <option value="">Select home team…</option>
+          </select>
+        </div>
+        <div class="at-label">vs</div>
+        <div class="team-field">
+          <label>Away Team</label>
+          <select class="mcsl-select" id="b-away-team">
+            <option value="">Select away team…</option>
+          </select>
+        </div>
+      </div>
+      <div class="team-field" style="margin-bottom:1rem">
+        <label>Generate recap for</label>
+        <select class="mcsl-select" id="b-recap-team">
+          <option value="">Select team to recap…</option>
+        </select>
+      </div>
     </div>
   </div>
 
@@ -247,13 +280,7 @@ const MCSL_TEAMS = [
 ].sort((a,b)=>a.name.localeCompare(b.name));
 
 // Populate team dropdowns
-function initTeamDropdowns() {
-  const opts = MCSL_TEAMS.map(t=>`<option value="${t.abbr}">${t.name} (${t.abbr})</option>`).join('');
-  document.getElementById('b-home-team').innerHTML += opts;
-  document.getElementById('b-away-team').innerHTML += opts;
 
-}
-document.addEventListener('DOMContentLoaded', initTeamDropdowns);
 
 
 // ── All-Star Standards ────────────────────────────────────────────────────────
@@ -263,11 +290,7 @@ function sec(t) {
   if (t.includes(':')) { const [m,s]=t.split(':'); return +m*60+parseFloat(s); }
   return parseFloat(t);
 }
-function fmtTime(s) {
-  if (isNaN(s)||s<=0) return '—';
-  if (s>=60) { const m=Math.floor(s/60),r=(s-m*60).toFixed(2).padStart(5,'0'); return `${m}:${r}`; }
-  return s.toFixed(2);
-}
+
 
 const ALLSTAR = {
   '12U|IM':      {M:sec('1:20.00'),F:sec('1:21.00')},
@@ -307,8 +330,52 @@ function onPasteInput() {
   const has=ta.value.trim().length>50;
   ta.classList.toggle('has-content',has);
   const st=document.getElementById('paste-status');
-  if(has){st.textContent='✓ Content ready — click Generate';st.className='file-status show ok';}
-  else{st.className='file-status';}
+  if(has){
+    st.textContent='✓ Content ready';st.className='file-status show ok';
+    populateAMeetTeamSelectors(ta.value);
+  } else {
+    st.className='file-status';
+    document.getElementById('a-team-selectors').style.display='none';
+  }
+}
+
+function populateAMeetTeamSelectors(text) {
+  // Reuse existing team detection logic from parseMeetPage
+  const teams = [];
+  const seen = new Set();
+  const normalized = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  const sLines = normalized.split('\n').map(l=>l.trim()).filter(Boolean);
+
+  for (let i=0; i<sLines.length; i++) {
+    const l = sLines[i];
+    // Same-line score: "TeamName (AB)  405.5"
+    const sameLine = l.match(/^([A-Z][A-Za-z\s&.'\-]+?)\s*\(([A-Z]{1,3})\)\s*[	\s]+(\d+\.?\d*)$/);
+    if (sameLine) {
+      const abbr=sameLine[2], name=sameLine[1].trim();
+      if (!seen.has(abbr)) { seen.add(abbr); teams.push({abbr, name}); }
+      continue;
+    }
+    // Split-line score: "TeamName (AB)" then score on next line
+    const nameOnly = l.match(/^([A-Z][A-Za-z\s&.'\-]+?)\s*\(([A-Z]{1,3})\)\s*$/);
+    if (nameOnly) {
+      const abbr=nameOnly[2], name=nameOnly[1].trim();
+      const next = sLines[i+1]?.trim();
+      if (next && /^\d+\.?\d*$/.test(next) && !seen.has(abbr)) {
+        seen.add(abbr); teams.push({abbr, name});
+      }
+    }
+  }
+
+  if (teams.length < 2) {
+    document.getElementById('a-team-selectors').style.display='none';
+    return;
+  }
+
+  const opts = teams.map(t=>`<option value="${t.abbr}">${t.name} (${t.abbr})</option>`).join('');
+  document.getElementById('a-home-team').innerHTML = '<option value="">Select home team…</option>' + opts;
+  document.getElementById('a-away-team').innerHTML  = '<option value="">Select away team…</option>'  + opts;
+  document.getElementById('a-recap-team').innerHTML = '<option value="">Select team to recap…</option>' + opts;
+  document.getElementById('a-team-selectors').style.display = '';
 }
 function setProgress(msg){document.getElementById('prog-msg').textContent=msg;document.getElementById('progress').className='progress show';}
 function hideProgress(){document.getElementById('progress').className='progress';}
@@ -325,17 +392,7 @@ function toggleDebug(){
   d.className=d.className.includes('show')?'debug-box':'debug-box show';
 }
 
-// ── Drag & drop ───────────────────────────────────────────────────────────────
-['dz-results','dz-drops'].forEach(id=>{
-  const el=document.getElementById(id);if(!el)return;
-  el.addEventListener('dragover',e=>{e.preventDefault();el.classList.add('over');});
-  el.addEventListener('dragleave',()=>el.classList.remove('over'));
-  el.addEventListener('drop',e=>{
-    e.preventDefault();el.classList.remove('over');
-    const f=e.dataTransfer.files[0];
-    if(f)processFile(id==='dz-results'?'results':'drops',f);
-  });
-});
+// ── File handling ───────────────────────────────────────────────────────────────
 function handleFile(which,input){if(input.files[0])processFile(which,input.files[0]);}
 async function processFile(which,file){
   if(!file.name.toLowerCase().endsWith('.pdf')){showFileStatus(which,'Must be a PDF',false);return;}
@@ -343,6 +400,58 @@ async function processFile(which,file){
   pdfText[which]=await extractPDF(file);
   showFileStatus(which,file.name,true);
   document.getElementById('card-'+which)?.classList.add('ok');
+  // For B-meet PDFs, detect teams and populate selectors
+  if(which==='bmeet') populateBmeetTeamSelectors(pdfText.bmeet);
+}
+
+function populateBmeetTeamSelectors(text) {
+  const fmt = detectBmeetFormat(text);
+  let detectedTeams = []; // [{abbr, name}]
+
+  if (fmt === 'results') {
+    // Scan for full team names in entry rows: "Name Age TeamName seed final"
+    // Collect unique team name strings then resolve to abbrs
+    const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').map(l=>l.trim()).filter(Boolean);
+    const entryRe = /^(\*?\d+|---)\s+(.+?)\s+(\d{1,2})\s+([A-Za-z][\w\s'.,\-]+?)\s+(NT|\d+:\d+\.\d+|\d+\.\d+)\s+(DQ|NS|SCR|\d+:\d+\.\d+|\d+\.\d+)\s*$/i;
+    const teamNames = new Set();
+    for (const line of lines) {
+      const m = line.match(entryRe);
+      if (m) teamNames.add(m[4].trim());
+    }
+    for (const name of teamNames) {
+      const abbr = resolveTeamAbbr(name);
+      if (!detectedTeams.find(t=>t.abbr===abbr)) {
+        const mcslTeam = MCSL_TEAMS.find(t=>t.abbr===abbr);
+        detectedTeams.push({abbr, name: mcslTeam?.name || name});
+      }
+    }
+  } else {
+    // Summary format: only one team listed (DA), the other is the opponent
+    // Just show the full MCSL dropdown as before
+    document.getElementById('b-team-selectors').style.display = '';
+    const allOpts = MCSL_TEAMS.map(t=>`<option value="${t.abbr}">${t.name} (${t.abbr})</option>`).join('');
+    document.getElementById('b-home-team').innerHTML = '<option value="">Select home team…</option>' + allOpts;
+    document.getElementById('b-away-team').innerHTML = '<option value="">Select away team…</option>' + allOpts;
+    document.getElementById('b-recap-team').innerHTML = '<option value="">Select team to recap…</option>' + allOpts;
+    return;
+  }
+
+  if (detectedTeams.length < 2) {
+    // Fallback: show full dropdown
+    document.getElementById('b-team-selectors').style.display = '';
+    const allOpts = MCSL_TEAMS.map(t=>`<option value="${t.abbr}">${t.name} (${t.abbr})</option>`).join('');
+    document.getElementById('b-home-team').innerHTML = '<option value="">Select home team…</option>' + allOpts;
+    document.getElementById('b-away-team').innerHTML = '<option value="">Select away team…</option>' + allOpts;
+    document.getElementById('b-recap-team').innerHTML = '<option value="">Select team to recap…</option>' + allOpts;
+    return;
+  }
+
+  // Populate with just the two detected teams
+  const opts = detectedTeams.map(t=>`<option value="${t.abbr}">${t.name} (${t.abbr})</option>`).join('');
+  document.getElementById('b-home-team').innerHTML = '<option value="">Select home team…</option>' + opts;
+  document.getElementById('b-away-team').innerHTML = '<option value="">Select away team…</option>' + opts;
+  document.getElementById('b-recap-team').innerHTML = '<option value="">Select team to recap…</option>' + opts;
+  document.getElementById('b-team-selectors').style.display = '';
 }
 function showFileStatus(which,msg,ok){
   const el=document.getElementById('status-'+which);
@@ -360,15 +469,39 @@ async function extractPDF(file) {
   for(let p=1;p<=pdf.numPages;p++){
     const page=await pdf.getPage(p);
     const content=await page.getTextContent();
-    const rows={};
-    for(const item of content.items){
-      const y=Math.round(item.transform[5]);
-      if(!rows[y])rows[y]=[];
-      rows[y].push({x:item.transform[4],str:item.str});
+
+    // Group items into rows using y-tolerance of 3px to handle
+    // sub-pixel rendering differences in columnar PDFs
+    const items = content.items.map(item=>({
+      x: item.transform[4],
+      y: item.transform[5],
+      str: item.str
+    }));
+
+    // Sort all items top-to-bottom
+    items.sort((a,b)=>b.y-a.y);
+
+    // Group into rows: items within 3px vertically go on the same row
+    const rows=[];
+    for(const item of items){
+      const lastRow=rows[rows.length-1];
+      if(lastRow && Math.abs(item.y - lastRow.y) <= 3){
+        lastRow.items.push(item);
+      } else {
+        rows.push({y:item.y, items:[item]});
+      }
     }
-    const ys=Object.keys(rows).map(Number).sort((a,b)=>b-a);
-    for(const y of ys){
-      out+=rows[y].sort((a,b)=>a.x-b.x).map(r=>r.str).join('\t')+'\n';
+
+    // Sort each row left-to-right and join with tab
+    for(const row of rows){
+      const ligNorm = s => s.replace(/[\u03B2\u03D0\uFB00-\uFB06]/g, m => (
+        {'\uFB00':'ff','\uFB01':'fi','\uFB02':'fl','\uFB03':'ffi',
+         '\uFB04':'ffl','\uFB05':'st','\uFB06':'st','\u03B2':'fi','\u03D0':'fi'}[m]||m));
+      const rawLine=row.items.sort((a,b)=>a.x-b.x).map(i=>ligNorm(i.str)).join('\t');
+      // Collapse tabs between word fragments (mid-word ligature splits like "Grif\tfi\tin")
+      // A tab is a mid-word split if both neighbors are non-space, non-digit word chars
+      const line=rawLine.replace(/([A-Za-z])\t([A-Za-z])/g,'$1$2').replace(/([A-Za-z])\t([A-Za-z])/g,'$1$2');
+      if(line.trim()) out+=line+'\n';
     }
     out+='\n';
   }
@@ -382,8 +515,15 @@ function flipName(raw) {
   if (raw.includes(',')) {
     const comma = raw.indexOf(',');
     const last  = raw.slice(0, comma).trim();
-    // everything after comma; strip trailing middle initial like " R" or " D"
+    // Strip trailing middle initial like " R" or " D"
     let first = raw.slice(comma+1).trim().replace(/\s+[A-Z]\.?$/, '').trim();
+    // Strip duplicate: if last word of first-part matches last word of last-name, remove it
+    // e.g. "Benjamin Fideli" + "Fensterseifer Fideli" → drop trailing "Fideli" from first
+    const lastNameLastWord = last.split(/\s+/).pop().toLowerCase();
+    const firstParts = first.split(/\s+/);
+    if (firstParts.length > 1 && firstParts[firstParts.length-1].toLowerCase() === lastNameLastWord) {
+      first = firstParts.slice(0,-1).join(' ');
+    }
     return `${first} ${last}`;
   }
   return raw;
@@ -393,17 +533,17 @@ function flipName(raw) {
 /*
   Exact format observed:
 
-  2025 Week 1 Dual Meet Damascus at Westleigh
+  2025 Week 1 Dual Meet TeamA at TeamB
   Team           Score
-  Damascus (DA)  405.5
-  Westleigh (WL) 379.5
+  TeamA (AB)  405.5
+  TeamB (CD)  379.5
 
   Event 1 - Male 12&U 100M Medley
   Seed Time  Final Time  Points
-  1  Joung, Joshua S (12)(WL)  1:11.82  1:12.44  6
-  2  Brock, Paxton C (12)(WL)  1:14.77  1:15.94  4
+  1  Smith, John A (12)(AB)  1:11.82  1:12.44  6
+  2  Jones, Amy B (11)(CD)   1:14.77  1:15.94  4
   ...
-  4  Zhao, Marc (10)(DA)        1:33.07  1:34.75  2
+  4  Lee, Sam C (10)(AB)     1:33.07  1:34.75  2
 
   Event 2 - Female 12&U 100M Medley
   ...
@@ -419,9 +559,9 @@ function flipName(raw) {
 function parseMeetPage(text) {
   debugLog = [];
   const lines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').map(l=>l.trim()).filter(Boolean);
-  const meet = { meetName:'', daAbbr:'DA', oppName:'', daScore:null, oppScore:null, events:[] };
+  const meet = { meetName:'', daAbbr:'', oppName:'', daScore:null, oppScore:null, teams:[], events:[] };
 
-  // ── Meet title: "2025 Week 1 Dual Meet Damascus at Westleigh"
+  // ── Meet title: "2025 Week 1 Dual Meet TeamA at TeamB"
   for (const l of lines) {
     if (/week\s*\d/i.test(l) && /meet/i.test(l)) {
       meet.meetName = l.replace(/\s+/g,' ').trim();
@@ -430,18 +570,27 @@ function parseMeetPage(text) {
   }
   debugLog.push('Meet title: ' + meet.meetName);
 
-  // ── Team scores: "Damascus (DA)  405.5" style lines
-  // Also handle tab-separated: "Damascus (DA)\t405.5"
-  for (const l of lines) {
-    const m = l.match(/^([A-Z][A-Za-z\s]+?)\s*\(([A-Z]{2,3})\)\s*[\t\s]+([\d]+\.?\d*)$/);
-    if (m) {
-      const name=m[1].trim(), abbr=m[2], score=parseFloat(m[3]);
-      // daAbbr and opponent resolved in generate() after DA detection
-      if (abbr==='DA') { meet.daAbbr=abbr; meet.daScore=score; }
-      else { meet.oppName=name; meet.oppScore=score; }
+  // ── Team scores — handle both same-line and next-line formats
+  for (let i=0; i<lines.length; i++) {
+    const l = lines[i];
+    // Same-line: "TeamName (AB)  405.5"
+    const sameLine = l.match(/^([A-Z][A-Za-z\s&.'\-]+?)\s*\(([A-Z]{1,3})\)\s*[\t\s]+(\d+\.?\d*)$/);
+    if (sameLine) {
+      const name=sameLine[1].trim(), abbr=sameLine[2], score=parseFloat(sameLine[3]);
+      if (!meet.teams.find(t=>t.abbr===abbr)) meet.teams.push({name, abbr, score});
+      continue;
+    }
+    // Split-line: "TeamName (AB)" then score on next line
+    const nameOnly = l.match(/^([A-Z][A-Za-z\s&.'\-]+?)\s*\(([A-Z]{1,3})\)\s*$/);
+    if (nameOnly) {
+      const name=nameOnly[1].trim(), abbr=nameOnly[2];
+      const next = lines[i+1]?.trim();
+      if (next && /^\d+\.?\d*$/.test(next) && !meet.teams.find(t=>t.abbr===abbr)) {
+        meet.teams.push({name, abbr, score:parseFloat(next)});
+      }
     }
   }
-  debugLog.push(`DA: ${meet.daAbbr} ${meet.daScore}  Opp: ${meet.oppName} ${meet.oppScore}`);
+  debugLog.push('Teams: ' + JSON.stringify(meet.teams));
 
   // ── Events
   // Header: "Event N - [Male/Female] [AgeGroup] [Distance]M [Stroke]"
@@ -518,11 +667,15 @@ function parseEventInfo(str) {
 }
 
 function strokeFrom(s) {
-  s=s.trim().toLowerCase();
+  // Normalize PDF ligature characters (ϐ ﬁ ﬂ etc.) before matching
+  s = s.replace(/[\u03B2\u03D0\uFB00-\uFB06]/g, m => (
+    {'\uFB00':'ff','\uFB01':'fi','\uFB02':'fl','\uFB03':'ffi',
+     '\uFB04':'ffl','\uFB05':'st','\uFB06':'st','\u03B2':'fi','\u03D0':'fi'}[m]||m));
+  s = s.trim().toLowerCase();
   if (/free/i.test(s)) return 'Free';
   if (/back/i.test(s)) return 'Back';
   if (/breast/i.test(s)) return 'Breast';
-  if (/fly|butterfly/i.test(s)) return 'Fly';
+  if (/fly|butterfly|butter/i.test(s)) return 'Fly';
   if (/medley|individual|\bim\b/i.test(s)) return 'IM';
   return s.charAt(0).toUpperCase()+s.slice(1);
 }
@@ -614,6 +767,8 @@ async function generate() {
     meetText=document.getElementById('paste-input').value;
     if (meetText.trim().length<50){showError('Please paste the meet results first.');return;}
     isBmeet = false; // Paste mode is always A-meet
+    const aRecap = document.getElementById('a-recap-team').value;
+    if (!aRecap){showError('Please select which team to generate the recap for.');return;}
   } else {
     // B-Meet PDF mode
     if (!pdfText.bmeet){showError('Please upload the B-Meet Summary PDF.');return;}
@@ -630,15 +785,42 @@ async function generate() {
 
   try {
     let meet;
-    if (isBmeet && mode==='pdf') {
-      // B-Meet PDF: parse HY-TEK summary format
+    if (mode==='paste') {
+      meet = parseMeetPage(meetText);
+      // Apply user's team selection
+      const aRecap = document.getElementById('a-recap-team').value;
+      const aHome  = document.getElementById('a-home-team').value;
+      const aAway  = document.getElementById('a-away-team').value;
+      meet.daAbbr  = aRecap;
+      const oppAbbr  = aRecap === aHome ? aAway : aHome;
+      const recapTeam = meet.teams.find(t=>t.abbr===aRecap);
+      const oppTeam   = meet.teams.find(t=>t.abbr===oppAbbr);
+      meet.oppName  = oppTeam?.name  || MCSL_TEAMS.find(t=>t.abbr===oppAbbr)?.name  || oppAbbr;
+      meet.daScore  = recapTeam?.score ?? null;
+      meet.oppScore = oppTeam?.score  ?? null;
+    } else if (isBmeet && mode==='pdf') {
       const homeAbbr = document.getElementById('b-home-team').value;
       const awayAbbr = document.getElementById('b-away-team').value;
+      const recapAbbr = document.getElementById('b-recap-team').value;
       const homeName = MCSL_TEAMS.find(t=>t.abbr===homeAbbr)?.name || homeAbbr;
       const awayName = MCSL_TEAMS.find(t=>t.abbr===awayAbbr)?.name || awayAbbr;
-      meet = parseBmeetPDF(pdfText.bmeet, homeAbbr, homeName, awayAbbr, awayName);
+      // Opponent is whichever team is NOT the recap team
+      const oppAbbr = recapAbbr === homeAbbr ? awayAbbr : homeAbbr;
+      const oppName = MCSL_TEAMS.find(t=>t.abbr===oppAbbr)?.name || oppAbbr;
+      const fmt = detectBmeetFormat(pdfText.bmeet);
+      debugLog.push('B-Meet format detected: ' + fmt);
+      if (fmt === 'results') {
+        meet = parseBmeetResultsPDF(pdfText.bmeet, recapAbbr, MCSL_TEAMS.find(t=>t.abbr===recapAbbr)?.name||recapAbbr, oppAbbr, oppName);
+        // Override home/away for title: home team is always homeAbbr
+        meet._homeAbbr = homeAbbr;
+        meet._awayAbbr = awayAbbr;
+      } else {
+        meet = parseBmeetPDF(pdfText.bmeet, recapAbbr, MCSL_TEAMS.find(t=>t.abbr===recapAbbr)?.name||recapAbbr, oppAbbr, oppName);
+        meet._homeAbbr = homeAbbr;
+        meet._awayAbbr = awayAbbr;
+      }
     } else {
-      meet = parseMeetPage(meetText);
+      meet = parseMeetPage(meetText); // fallback
     }
     setProgress('Computing recap…');
     const recap=buildRecap(meet,isBmeet);
@@ -834,6 +1016,189 @@ function parseEventDesc(str) {
   return {gender, ageGroup, distance, stroke};
 }
 
+
+// ── B-Meet format detection ────────────────────────────────────────────────────
+function detectBmeetFormat(text) {
+  // Results format: event-first, full team names inline, "Results - All Events"
+  if (/Results\s*-\s*All Events/i.test(text)) return 'results';
+  if (/^Event\s+\d+\s+(Boys|Girls|Men|Women|Mixed)\s+/im.test(text)) return 'results';
+  // Summary format: swimmer-first, ID# fields, "#N Event Finals" lines
+  if (/ID#:/i.test(text) && /#\d+\s+(Men|Women)/i.test(text)) return 'summary';
+  // Fallback: if we see "Finals" with event number prefix, it's summary
+  if (/#\d+\s+\w+.*Finals/i.test(text)) return 'summary';
+  return 'unknown';
+}
+
+// ── Resolve a full team name like "Flower Valley Frogs" to an MCSL abbr ────────
+function resolveTeamAbbr(fullName) {
+  // Strip common swim team suffixes
+  const cleaned = fullName
+    .replace(/\s*(swim\s*team.*|frogs|dolphins|sharks|marlins|swim\s*club|aquatics?|sc|barracudas?|stingrays?|sea\s*hawks?|waves?|tidal\s*waves?|-PV|-MD)\s*$/i, '')
+    .trim().toLowerCase();
+  let best = null, bestScore = 0;
+  for (const t of MCSL_TEAMS) {
+    const tname = t.name.toLowerCase();
+    if (tname === cleaned) return t.abbr;
+    if (cleaned.startsWith(tname) || tname.startsWith(cleaned)) {
+      const score = Math.min(tname.length, cleaned.length);
+      if (score > bestScore) { bestScore = score; best = t.abbr; }
+    }
+    // Also try word overlap: count matching words
+    const twords = tname.split(/\s+/);
+    const cwords = cleaned.split(/\s+/);
+    const overlap = twords.filter(w => cwords.includes(w)).length;
+    if (overlap >= 2 && overlap > bestScore - 10) {
+      bestScore = overlap + 10;
+      best = t.abbr;
+    }
+  }
+  return best || fullName.slice(0,3).toUpperCase();
+}
+
+// ── B-Meet Results format parser (HY-TEK Results report) ─────────────────────
+/*
+  Format:
+    Week 2B DA at FV - 6/24/2026
+    Results - All Events
+    Event 1 Boys 12 & Under 100 SC Meter IM
+    1:20.00 ALL*
+    Name Age Team Seed Time Finals Time
+    1 Benedetti, Brady 11 Flower Valley Frogs 1:29.45 1:28.56
+    3 Smith, John     11 Home Swim Team-PV 1:37.76 1:35.14
+    --- Kissam, Kaia  10 Flower Valley Frogs 1:38.25 DQ
+    (Event 3 Boys 13-14 100 SC Meter IM)   ← page-continuation header, skip
+*/
+function parseBmeetResultsPDF(text, homeAbbr, homeName, awayAbbr, awayName) {
+  debugLog = [];
+  // Normalize ligature characters and collapse mid-word tab splits before parsing
+  const _lig = {
+    'ﬀ':'ff','ﬁ':'fi','ﬂ':'fl','ﬃ':'ffi',
+    'ﬄ':'ffl','ﬅ':'st','ﬆ':'st',
+    'β':'fi','ϐ':'fi'  // β (U+03B2) and ϐ (U+03D0) both used by HY-TEK PDFs
+  };
+  const _ligRe = /[ﬀ-ﬆβϐ]/g;
+  const cleanLine = l => {
+    // Step 1: expand ligature characters (ϐ ﬁ ﬂ etc.)
+    l = l.replace(_ligRe, m => _lig[m]||m);
+    // Step 2: remove space-only and double tab artifacts from PDF.js column extraction
+    l = l.replace(/\t +\t/g,'\t').replace(/\t\t+/g,'\t');
+    // Step 3: collapse short letter fragments separated by tabs (ligature split artifacts)
+    // Allow comma at end of fragment and space in lookahead (for "Last, First" names)
+    for (let i=0; i<4; i++)
+      l = l.replace(/([A-Za-z]{1,8})\t([A-Za-z]{1,4},?)(?=\t| |$)/g, (_,a,b)=>a+b);
+    // Step 4: fix double-vowel artifacts from ligature expansion + merging
+    l = l.replace(/([fl])ii/gi,'$1i').replace(/([fl])ll/gi,'$1l');
+    return l;
+  };
+  const rawLines = text.replace(/\r\n/g,'\n').replace(/\r/g,'\n').split('\n').map(l=>l.trim()).filter(Boolean);
+  const lines = rawLines.map(cleanLine).filter(Boolean);
+  // Debug: log any line containing a raw ligature char or "Grif"
+  rawLines.forEach((raw,i) => {
+    if (/[\u03B2\u03D0\uFB00-\uFB06]/.test(raw) || raw.includes('Grif')) {
+      debugLog.push('RAW['+i+']: '+JSON.stringify(raw));
+      debugLog.push('CLN['+i+']: '+JSON.stringify(lines[i]||'(filtered)'));
+    }
+  });
+
+  // Title: "Week 2B DA at FV - 6/24/2026"
+  let meetTitle = '';
+  for (const l of lines) {
+    if (/week\s*\d/i.test(l) && l.length < 80) { meetTitle = l.replace(/\s*-\s*\d{1,2}\/\d{1,2}\/\d{4}.*$/,'').trim(); break; }
+  }
+  const weekM = meetTitle.match(/week\s*(\d+)\s*([AB])?/i);
+  const weekNum = weekM ? weekM[1] : '?';
+  const weekLetter = weekM && weekM[2] ? weekM[2].toUpperCase() : 'B';
+
+  const meet = {
+    meetName: meetTitle,
+    daAbbr: homeAbbr,
+    oppName: awayName,
+    daScore: null, oppScore: null,
+    teams: [
+      {name: homeName, abbr: homeAbbr, score: null},
+      {name: awayName, abbr: awayAbbr, score: null}
+    ],
+    events: [],
+    _weekNum: weekNum,
+    _weekLetter: weekLetter,
+  };
+
+  const evHeaderRe  = /^Event\s+(\d+)\s+(Boys|Girls|Men|Women|Mixed)\s+(.+)/i;
+  const evContRe    = /^\(Event\s+\d+/i;  // "(Event 3 ...)" continuation header — skip
+  // Entry: place  Last, First [words]  age(1-2 digits)  Team Name(multi-word)  seed  final
+  const entryRe = /^(\*?\d+|---)\s+(.+?)\s+(\d{1,2})\s+([A-Za-z][\w\s'.,\-]+?)\s+(NT|\d+:\d+\.\d+|\d+\.\d+)\s+(DQ|NS|SCR|\d+:\d+\.\d+|\d+\.\d+)\s*$/i;
+
+  let curEvent = null;
+
+  for (const line of lines) {
+    // Skip continuation headers "(Event N ...)"
+    if (evContRe.test(line)) continue;
+    // Skip ALL* standard lines, column headers, page headers
+    if (/^(\d+:\d+\.\d+|\d+\.\d+)\s+ALL/i.test(line)) continue;
+    if (/^(Name|Place)\s+Age/i.test(line)) continue;
+    if (/^MCSL\s*-/i.test(line)) continue;
+    if (/^Results\s*-/i.test(line)) continue;
+
+    // Event header?
+    const evM = line.match(evHeaderRe);
+    if (evM) {
+      const genderWord = evM[2];
+      const gender = /^(girls?|women)/i.test(genderWord) ? 'F' : 'M';
+      const desc = genderWord + ' ' + evM[3];
+      const evInfo = parseEventDesc(desc);
+      // Use a unique key: gender+ageGroup+distance+stroke (handles duplicate event numbers)
+      const evKey = `${evInfo.gender||gender}|${evInfo.ageGroup}|${evInfo.distance}|${evInfo.stroke}`;
+      // Avoid duplicate keys from page breaks re-emitting same event
+      curEvent = meet.events.find(e=>e._key===evKey);
+      if (!curEvent) {
+        curEvent = {
+          _key: evKey,
+          gender: evInfo.gender || gender,
+          ageGroup: evInfo.ageGroup,
+          distance: evInfo.distance,
+          stroke: evInfo.stroke,
+          eventNum: parseInt(evM[1]),
+          entries: []
+        };
+        meet.events.push(curEvent);
+      }
+      debugLog.push(`Ev ${evM[1]}: ${evKey}`);
+      continue;
+    }
+
+    if (!curEvent) continue;
+
+    // Entry row?
+    const em = line.match(entryRe);
+    if (!em) continue;
+
+    const placeStr  = em[1];
+    const rawName   = em[2].trim();
+    const age       = parseInt(em[3]);
+    const teamFull  = em[4].trim();
+    const seedStr   = em[5].trim();
+    const finalStr  = em[6].trim();
+
+    const place   = /^\*?(\d+)$/.test(placeStr) ? parseInt(placeStr.replace('*','')) : placeStr;
+    const name    = flipName(rawName);
+    const teamAbbr = resolveTeamAbbr(teamFull);
+    const seedSec  = /^(NT|NR)$/i.test(seedStr)  ? null : sec(seedStr);
+    const finalSec = /^(DQ|NS|SCR)$/i.test(finalStr) ? null : sec(finalStr);
+
+    if (!finalSec) continue; // skip DQ/NS
+
+    curEvent.entries.push({
+      place, name, team: teamAbbr,
+      seedSec, finalSec, finalStr,
+      points: 0
+    });
+  }
+
+  debugLog.push(`Results-format events: ${meet.events.length}`);
+  debugLog.push(`Results-format total entries: ${meet.events.reduce((s,e)=>s+e.entries.length,0)}`);
+  return meet;
+}
+
 // ── Recap builder ─────────────────────────────────────────────────────────────
 function buildRecap(meet, isBmeet=false) {
   const {meetName,daAbbr,oppName,daScore,oppScore,events}=meet;
@@ -870,27 +1235,44 @@ function buildRecap(meet, isBmeet=false) {
     debugLog.push('Sample: '+JSON.stringify(Object.entries(swimmerMap)[0]));
 
   // ── Drops
-  const swimmerDrops={}; // name → {stroke→dropSec}
-  const allDropEvents=[];
+  // allDropEvents: every individual event drop (d>0), used for PBs and biggest drop
+  // swimmerEventDrops: name → [{stroke, dropSec}] — one entry per event
+  // For Most Improved: count distinct strokes with ANY drop (d>0), combine totals
+  // For drop buckets: each individual event drop checked independently against ≥2s floor
+  const allDropEvents=[];       // {name, stroke, dropSec} — all positive drops
+  const swimmerEventDrops={};   // name → [{stroke, dropSec}]
 
   for (const [name,sw] of Object.entries(swimmerMap)) {
-    swimmerDrops[name]={};
+    swimmerEventDrops[name]=[];
     for (const r of sw.results) {
       if (r.seedSec&&r.seedSec>0&&r.finalSec>0) {
         const d=r.seedSec-r.finalSec;
         if (d>0) {
-          swimmerDrops[name][r.stroke]=(swimmerDrops[name][r.stroke]||0)+d;
-          allDropEvents.push({name,stroke:r.stroke,dropSec:d});
+          swimmerEventDrops[name].push({stroke:r.stroke, dropSec:d});
+          allDropEvents.push({name, stroke:r.stroke, dropSec:d});
         }
       }
     }
   }
 
-  // Combined drop per swimmer
+  // Combined drop per swimmer — for Most Improved
+  // strokes = distinct stroke names where swimmer dropped (by any amount)
+  // total   = sum of all individual drops across all events
   const combinedDrop={};
-  for (const [name,sm] of Object.entries(swimmerDrops)) {
-    const total=Object.values(sm).reduce((a,b)=>a+b,0);
-    if (total>0) combinedDrop[name]={total,strokes:Object.keys(sm)};
+  for (const [name,drops] of Object.entries(swimmerEventDrops)) {
+    if (!drops.length) continue;
+    const total=drops.reduce((s,e)=>s+e.dropSec,0);
+    const strokes=[...new Set(drops.map(e=>e.stroke))];
+    combinedDrop[name]={total, strokes};
+  }
+
+  // Drop buckets — each individual event drop evaluated independently
+  // floor-second bucketing: 2.00-2.99=2, 3.00-3.99=3, etc. Only ≥2s shown.
+  const bucketEntries=[]; // {name, stroke, dropSec} for all drops ≥2s
+  for (const [name,drops] of Object.entries(swimmerEventDrops)) {
+    for (const {stroke,dropSec} of drops) {
+      if (dropSec>=2) bucketEntries.push({name,stroke,dropSec});
+    }
   }
 
   // ── All-Star qualifiers
@@ -918,15 +1300,12 @@ function buildRecap(meet, isBmeet=false) {
   const pbCount=allDropEvents.length;
   const biggest=allDropEvents.sort((a,b)=>b.dropSec-a.dropSec)[0]||null;
 
-  // ── Drop buckets (floor seconds ≥2)
+  // ── Drop buckets (already computed above as bucketEntries)
   const buckets={};
-  for (const [name,sm] of Object.entries(swimmerDrops)) {
-    for (const [stroke,d] of Object.entries(sm)) {
-      if (d<2) continue;
-      const b=Math.floor(d);
-      if (!buckets[b])buckets[b]=[];
-      buckets[b].push({name,stroke});
-    }
+  for (const {name,stroke,dropSec} of bucketEntries) {
+    const b=Math.floor(dropSec);
+    if (!buckets[b])buckets[b]=[];
+    buckets[b].push({name,stroke});
   }
 
   // ── Top scorers
@@ -950,7 +1329,7 @@ function buildRecap(meet, isBmeet=false) {
   const warns=[];
   if (events.length===0) warns.push('No events detected — format may not match expected MCSL layout.');
   if (Object.keys(swimmerMap).length===0) warns.push(`No ${daAbbr} swimmer entries found.`);
-  const seedCount=Object.values(swimmerDrops).reduce((a,b)=>a+Object.keys(b).length,0);
+  const seedCount=Object.values(swimmerEventDrops).reduce((s,arr)=>s+arr.length,0);
   if (seedCount===0&&Object.keys(swimmerMap).length>0)
     warns.push('No seed times found — drops section will be empty. Check that the results page includes a Seed Time column.');
   showWarnings(warns);
@@ -972,14 +1351,22 @@ function buildRecap(meet, isBmeet=false) {
   const opp=oppName?oppName.toUpperCase():'OPPONENT';
 
   // Format title: extract week number and A/B designation
-  // meetName e.g. "2025 Week 1 Dual Meet Damascus at Westleigh" or "2025 Week 1A Dual Meet..."
+  // meetName e.g. "2025 Week 1 Dual Meet TeamA at TeamB" or "2025 Week 1A Dual Meet..."
   const weekM = mName.match(/week\s*(\d+)\s*([AB])?/i);
   const weekNum = meet._weekNum || (weekM ? weekM[1] : '?');
   const weekLetter = meet._weekLetter || (weekM && weekM[2] ? weekM[2].toUpperCase() : (isBmeet ? 'B' : 'A'));
   const daName = (MCSL_TEAMS.find(t=>t.abbr===daAbbr)?.name || daAbbr).toUpperCase();
-  const formattedTitle = isBmeet
-    ? `Week ${weekNum} B-Meet: ${opp} at ${daName}`
-    : `Week ${weekNum} ${weekLetter}-Meet: ${daName} (${da}) VS ${opp} (${os})`;
+  let formattedTitle;
+  if (isBmeet) {
+    // Use _homeAbbr/_awayAbbr if set (Results format preserves actual home/away)
+    const homeAbbr = meet._homeAbbr || daAbbr;
+    const awayAbbr = meet._awayAbbr || (meet.teams?.find(t=>t.abbr!==homeAbbr)?.abbr);
+    const homeName = (MCSL_TEAMS.find(t=>t.abbr===homeAbbr)?.name || homeAbbr).toUpperCase();
+    const awayName = (MCSL_TEAMS.find(t=>t.abbr===awayAbbr)?.name || awayAbbr || opp).toUpperCase();
+    formattedTitle = `Week ${weekNum} B-Meet: ${awayName} at ${homeName}`;
+  } else {
+    formattedTitle = `Week ${weekNum} ${weekLetter}-Meet: ${daName} (${da}) VS ${opp} (${os})`;
+  }
   o+=formattedTitle+'\n\n';
 
   o+=`Top 5 Most Improved (3+ Events)\n`;
