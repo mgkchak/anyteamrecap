@@ -1,6 +1,6 @@
 # MCSL Meet Recap Generator
 
-Swim meet recap generator for MCSL dual meets. Paste A-meet results or upload a B-meet PDF to instantly generate a formatted weekly recap: Top 5 Most Improved, Top Point Scorers, All-Star Qualifiers, Personal Bests, and drop-time buckets by second. MCSL All-Star nominating standards built in. Export to clipboard or Markdown.
+Swim meet recap generator for any MCSL team. Paste A-meet results or upload a B-meet PDF to instantly generate a formatted weekly recap: Top 5 Most Improved, Top Point Scorers, All-Star Qualifiers, Personal Bests, and drop-time buckets by second. MCSL All-Star nominating standards built in. Export to clipboard or Markdown.
 
 No server, no account, no API — open the file in any browser and it works.
 
@@ -10,18 +10,21 @@ No server, no account, no API — open the file in any browser and it works.
 
 ### A-Meet (Paste Results)
 
-1. Visit **mcsl.org** and select **Meet Results** from the left-hand menu, then select the year and week
+1. Visit **mcsl.org**, select **Meet Results** from the left-hand menu, then select the year and week
 2. Scroll down to the meet you want and click to open it
 3. Select everything from **20XX Week [#] Dual Meet [Team] at [Team]** at the top all the way through the last result at the bottom of the page
 4. Copy (**Ctrl+C**), then paste into the box (**Ctrl+V**)
-5. Click **⚡ Generate Recap**
+5. Select the **Home Team**, **Away Team**, and **Generate recap for** from the dropdowns that appear
+6. Click **⚡ Generate Recap**
 
 ### B-Meet (Upload PDF)
 
 1. Switch to the **📄 B-Meet (Upload PDF)** tab
-2. Select the **Home Team** and **Away Team** from the dropdowns
-3. Upload the HY-TEK Meet Manager **Meet Summary PDF**
+2. Upload the meet recap PDF — teams are detected automatically
+3. Select the **Home Team**, **Away Team**, and **Generate recap for** from the dropdowns that appear
 4. Click **⚡ Generate Recap**
+
+Supports both HY-TEK Meet Manager **Summary** format (one team, swimmer-first) and **Results** format (both teams, event-first).
 
 ---
 
@@ -78,8 +81,8 @@ The parser expects the standard MCSL results page format:
 ```
 Event 1 - Male 12&U 100M Medley
 Seed Time    Final Time    Points
-1    Joung, Joshua S (12)(WL)    1:11.82    1:12.44    6
-4    Zhao, Marc (10)(DA)         1:33.07    1:34.75    2
+1    Smith, John A (12)(AB)  1:11.82    1:12.44    6
+4    Lee, Sam C (10)(AB)     1:33.07    1:34.75    2
 ```
 
 Key details:
@@ -93,21 +96,32 @@ Key details:
 
 ## B-Meet Parsing Notes
 
-The parser expects the HY-TEK Meet Manager **Meet Summary** report:
+Two HY-TEK PDF formats are supported and auto-detected on upload:
 
+**Summary format** (swimmer-first):
 ```
-1 Agusto-Cox, Katerina - Female - Age: 15 - ID#: 030811KATAAGUS
-#5 Women 15-18 100 IM Finals 1:25.50 1:24.27 (5) *
-#15 Women 15-18 100 Free Finals 1:16.07 1:15.96 (4) *
+1 Smith, John - Male - Age: 15 - ID#: XXXXXXXXXX
+#5 Men 15-18 100 IM Finals 1:25.50 1:24.27 (5) *
 ```
 
-Key details:
-- One swimmer per block; name in `Last, First [MI]` format → converted to `First Last`
-- Gender and age parsed from the swimmer header line
-- Seed and final times are the two values after `Finals`
-- `NT` seed = no prior time (excluded from drops but counts toward personal bests if finished)
+**Results format** (event-first, both teams):
+```
+Event 1 Boys 12 & Under 100 SC Meter IM
+Name Age Team Seed Time Finals Time
+1 Smith, John 15 Home Swim Team 1:29.45 1:28.56
+```
+
+Key details for both:
+- `NT` seed = no prior time (excluded from drops, still counts as personal best if finished)
 - `DQ`, `NS`, `SCR`, `EXH` finals excluded entirely
-- Asterisk (`*`) denotes a drop per HY-TEK; the app calculates drops independently
+- PDF ligature characters (`ﬁ`, `ﬂ`, `ϐ`) normalized automatically
+- Team names in Results format (e.g. `Flower Valley Frogs`) resolved to MCSL abbreviations
+
+---
+
+## Troubleshooting
+
+If output looks wrong, click **"show parsing debug info"** below the output. It shows detected teams, event count, entry count, and sample parsed entries — useful for identifying format mismatches.
 
 ---
 
